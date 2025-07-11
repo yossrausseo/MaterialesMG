@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="pos_daily_report" inherit_id="point_of_sale.report_saledetails">
+        <xpath expr="//tr[@t-foreach='products']//td[4]" position="replace">
+            <td class="text-end" style="background-color: #dadada;">
+                <t t-if="currency['position']">
+                    <span>
+                        <t t-out="category['total']" t-options="{'widget': 'float', 'precision': currency['precision']}"/> 
+                        <t t-out='currency["symbol"]'/>
+                        / 
+                    </span>
+                    <span style="color: red">
+                        <t t-esc='symbol_ref'/>
+                        <t t-esc='total_paid_ref' t-options="{'widget': 'float', 'precision': currency_precision_ref}"/>
+                    </span>
+                    
+                </t>
+                <t t-else="">
+                    <span t-out='currency["symbol"]'/>
+                    <span t-out="category['total']" t-options="{'widget': 'float', 'precision': currency['precision']}"/>
+                </t>
+            </td>
+        </xpath>
+
+        <xpath expr="//tr[@t-foreach='products']//tr//td[4]" position="replace">
+            <td class="text-end">
+                <t t-if="currency['position']">
+                    <span>
+                        <t t-out='line["base_amount"]' t-options="{'widget': 'float', 'precision': currency['precision']}"/>
+                        <t t-out='currency["symbol"]' />
+                        / 
+                    </span>
+                   
+                    <span style="color: red">
+                        <t t-esc='symbol_ref'/>
+                        <t t-esc='line["base_amount_ref"]' t-options="{'widget': 'float', 'precision': currency_precision_ref}"/>
+                    </span>
+                </t>
+                <t t-else="" >
+                    <span t-out='currency["symbol"]'>$</span>
+                    <span t-out='line["base_amount"]' t-options="{'widget': 'float', 'precision': currency['precision']}">567789</span>
+                </t>
+                <t t-if='line["discount"] != 0'>
+                    Disc: <span t-out='line["discount"]'>45</span>%
+                </t>
+            </td>
+        </xpath>
+
+        <xpath expr="//div[@id='sales']//tbody//tr[2]//td[4]" position="replace">
+            <td class="text-end" style="background-color: #b1b1b1;">
+                <t t-if="currency['position']">
+                    <strong>
+                        <span>
+                            <t t-out='products_info["total"]' t-options="{'widget': 'float', 'precision': currency['precision']}"/>
+                            <t t-out='currency["symbol"]' />
+                            / 
+                        </span>
+                        <span style="color: red">
+                            <t t-esc='symbol_ref'/>
+                            <t t-esc='total_paid_ref' t-options="{'widget': 'float', 'precision': currency_precision_ref}"/>
+                        </span>
+                    </strong>
+                </t>
+                <t t-else="" >
+                    <strong><span t-out='currency["symbol"]'>$</span><span t-out='products_info["total"]' t-options="{'widget': 'float', 'precision': currency['precision']}">1000</span></strong>
+                </t>   
+            </td>
+        </xpath>
+
+        <xpath expr="//tr[@t-foreach='taxes']" position="replace">
+            <tr t-foreach='taxes' t-as='tax'>
+                <td><span t-out="tax['name']">Demo Name</span></td>
+                <td class="text-end">
+                    <t t-if="currency['position']">
+                        <span>
+                            <t t-out="tax['tax_amount']" t-options="{'widget': 'float', 'precision': currency['precision']}"/>
+                            <t t-out='currency["symbol"]'/>
+                            /
+                        </span>
+                        <span style="color: red">
+                            <t t-esc='symbol_ref'/>
+                            <t t-esc="tax['tax_amount_ref']"
+                            t-options="{'widget': 'float', 'precision': currency_precision_ref}"/>
+                        </span>
+                    </t>
+                    <t t-else="" >
+                        <span t-out='currency["symbol"]'>$</span>
+                        <span t-out="tax['tax_amount']" t-options="{'widget': 'float', 'precision': currency['precision']}">0.00</span>
+                    </t>
+
+                </td>
+                <td class="text-end">
+                    <t t-if="currency['position']">
+                        <span>
+                        <t t-out="tax['base_amount']" t-options="{'widget': 'float', 'precision': currency['precision']}"/>
+                        <t t-out='currency["symbol"]' />
+                        / 
+                        </span>
+                        <span style="color: red">
+                            <t t-esc='symbol_ref'/>
+                            <t t-esc="round(tax['base_amount_ref'],2)"
+                            t-options="{'widget': 'float', 'precision': currency_precision_ref}"/>
+                        </span>
+                    </t>
+                    <t t-else="" >
+                        <span t-out='currency["symbol"]'>$</span>
+                        <span t-out="tax['base_amount']" t-options="{'widget': 'float', 'precision': currency['precision']}">0.00</span>
+                    </t>
+                </td>
+            </tr>
+        </xpath>
+
+        <xpath expr="//t[@t-if='taxes']//tr[2]" position="replace">
+            <tr>
+                <td style="background-color: #b1b1b1;"><strong>Total</strong></td>
+                <td class="text-end" style="background-color: #b1b1b1;">
+                    <t t-if="currency['position']">
+                        <strong>
+                            <span>
+                                <t t-out='taxes_info["tax_amount"]' t-options="{'widget': 'float', 'precision': currency['precision']}"/>
+                                <t t-out='currency["symbol"]' />
+                                / 
+                            </span>
+                            <span style="color: red">
+                                <t t-esc='symbol_ref'/>
+                                <t t-esc="taxes_info['tax_amount_ref']"
+                                t-options="{'widget': 'float', 'precision': currency_precision_ref}"/>
+                            </span>
+                        </strong>
+                    </t>
+                    <t t-else="" >
+                        <strong><span t-out='currency["symbol"]'>$</span><span t-out='taxes_info["tax_amount"]' t-options="{'widget': 'float', 'precision': currency['precision']}">0.00</span></strong>
+                    </t>
+                </td>
+                <td class="text-end" style="background-color: #b1b1b1;">
+                    <t t-if="currency['position']">
+                        <strong>
+                            <span>
+                                <t t-out='taxes_info["base_amount"]' t-options="{'widget': 'float', 'precision': currency['precision']}" />
+                                <t t-out='currency["symbol"]'/>
+                                / 
+                            </span>
+                            <span style="color: red">
+                                    <t t-esc='symbol_ref'/>
+                                    <t t-esc="taxes_info['base_amount_ref']"
+                                    t-options="{'widget': 'float', 'precision': currency_precision_ref}"/>
+                            </span>
+                        </strong>
+                    </t>
+                    <t t-else="" >
+                        <strong><span t-out='currency["symbol"]'>$</span><span t-out='taxes_info["base_amount"]' t-options="{'widget': 'float', 'precision': currency['precision']}">0.00</span></strong>
+                    </t>
+                </td>
+            </tr>
+        </xpath>
+
+        <xpath expr="//tr[@t-foreach='payments']//td[2]" position="replace">
+            <tr t-foreach='payments' t-as='payment'>
+                <td class="text-end">
+                    <span t-if="currency['position']">
+                        <span>
+                         <t t-out="payment['total']" t-options="{'widget': 'float', 'precision': currency['precision']}"/>
+                         <t t-out='currency["symbol"]'/>
+                            /
+                        </span>
+                        <span style="color: red">
+                            <t t-esc='symbol_ref'/>
+                            <!-- <t t-esc="payment['total_ref']" t-options="{'widget': 'float', 'precision': currency_precision_ref}"/> -->
+                            <t t-esc="total_paid_ref" t-options="{'widget': 'float', 'precision': currency_precision_ref}"/>
+                        </span>
+                    </span>
+                    <span t-else="">
+                        <span t-out='currency["symbol"]'>$</span><span t-out="payment['total']" t-options="{'widget': 'float', 'precision': currency['precision']}">123.45</span>
+                    </span>
+                </td>
+            </tr>
+        </xpath>
+
+       
+       <xpath expr="//div[@id='discounts']//div[2]/div" position="replace">
+            <div class="col-12">
+                <strong>Amount of discounts</strong>:
+                <span t-if="currency['position']">
+                    <span>
+                        <t t-out="discount_amount" t-options="{'widget': 'float', 'precision': currency['precision']}"/>
+                        <t t-out='currency["symbol"]'/>
+                        /
+                    </span>
+                    <span style="color: red">
+                        <t t-esc='symbol_ref'/>
+                        <t t-esc="discount_amount_ref"
+                            t-options="{'widget': 'float', 'precision': currency_precision_ref}"/>
+                    </span>
+                </span>
+                <span t-else="">
+                    <span t-out='currency["symbol"]'>$</span>
+                    <span t-out="discount_amount" t-options="{'widget': 'float', 'precision': currency['precision']}">50.00</span>
+                </span>
+            </div>
+       </xpath>
+
+        <xpath expr="//t[@id='closing_session']//div[2]//span[1]" position="replace">
+            <span t-if="currency['position']">
+                <span>
+                    <t t-out='currency["total_paid"]' t-options="{'widget': 'float', 'precision': currency['precision']}" />
+                    <t t-out='currency["symbol"]'/>
+                    /
+                </span>
+                <span style="color: red">
+                    <t t-esc='symbol_ref'/>
+                    <t t-esc="total_paid_ref"
+                        t-options="{'widget': 'float', 'precision': currency_precision_ref}"/>
+                </span>
+            </span>
+            
+        </xpath>
+    </template>
+</odoo>

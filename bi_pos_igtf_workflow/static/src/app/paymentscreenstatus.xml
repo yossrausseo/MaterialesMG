@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="pos_service_charge_template" inherit_id="point_of_sale.template" xml:space="preserve">
+
+	<t t-name="PaymentScreen-Paymentlines" t-inherit="point_of_sale.PaymentScreenStatus" t-inherit-mode="extension" owl="1">
+		<xpath expr="//div[hasclass('payment-status-total-due')]" position="after">
+			<div class="payment-status-total-due">
+                <span class="label">Monto total con IGTF </span>
+                <span>
+                    <t t-esc="toal_amount_igtf" />
+                </span>
+            </div>
+            <div class="payment-status-total-due">
+                <span class="label">IGTF </span>
+                <span>
+                    <t t-esc="amount_igtf" />
+                </span>
+            </div>
+		</xpath>
+	</t>
+</templates>
+
+

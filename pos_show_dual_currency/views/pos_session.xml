@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="view_pos_session_form_pos_dual_currency"  model="ir.ui.view">
+        <field name="name">view_pos_session_form pos_dual_currency</field>
+        <field name="model">pos.session</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_session_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='move_id']" position="after">
+                <field name="ref_me_currency_id"/>
+            </xpath>
+            <xpath expr="//field[@name='cash_register_balance_start']" position="after">
+                <field name="cash_register_balance_start_mn_ref"/>
+            </xpath>
+            <xpath expr="//field[@name='cash_register_balance_end_real']" position="after">
+                <field name="tax_today" readonly="1"/>
+                <field name="cash_register_balance_end_real_mn_ref" invisible="state != 'closed'"/>
+            </xpath>
+        </field>
+    </record>
+
+
+</odoo>

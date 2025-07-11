@@ -1,0 +1,153 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<odoo>
+    <data>
+        <record id="view_pos_order_tree_inherit" model="ir.ui.view">
+            <field name="name">pos.order.tree.view.inherit</field>
+            <field name="model">pos.order</field>
+            <field name="inherit_id" ref="point_of_sale.view_pos_order_tree"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='amount_total']"
+                       position="after">
+                    <field name="ref_me_currency_id" optional="hide"/>
+                    <field name="session_rate" optional="show"/>
+                    <field name="sum_amount_total_ref" widget="monetary" sum="Total Ref"
+                           options="{'currency_field': 'ref_me_currency_id'}"/>
+                    <field name="amount_total_ref" widget="monetary" invisible="1"
+                           options="{'currency_field': 'ref_me_currency_id'}"/>
+                </xpath>
+
+            </field>
+        </record>
+
+        <record id="view_pos_order_form_inherit" model="ir.ui.view">
+            <field name="name">pos.order.form.view.inherit</field>
+            <field name="model">pos.order</field>
+            <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='session_id']"
+                       position="after">
+                    <field name="ref_me_currency_id"/>
+                    <field name="session_rate"/>
+                </xpath>
+                <xpath expr="//group[@name='order_total']" position="replace">
+                     <group>
+                            <group class="oe_subtotal_footer" name="order_total_ref" string="Moneda De Referencia">
+                                   <field name="amount_tax_ref"
+                                          force_save="1"
+                                          widget="monetary"
+                                          options="{'currency_field': 'ref_me_currency_id'}"
+                                   />
+                                   <div class="oe_subtotal_footer_separator oe_inline o_td_label">
+                                          <label for="amount_total_ref"/>
+                                          <button name="button_dummy"
+                                                 invisible="state != 'draft'" string="(update)" class="oe_edit_only oe_link"/>
+                                   </div>
+                                   <field name="amount_total_ref"
+                                          force_save="1"
+                                          nolabel="1"
+                                          class="oe_subtotal_footer_separator"
+                                          widget="monetary" options="{'currency_field': 'ref_me_currency_id'}"/>
+                                   <field name="amount_paid_ref"
+                                          string="Total Paid (with rounding)"
+                                          class="oe_subtotal_footer_separator"
+                                          widget="monetary"
+                                          options="{'currency_field': 'ref_me_currency_id'}"
+                                          invisible="amount_paid_ref=='amount_total_ref'"/>
+                                          
+                                   <label for="margin_ref"/>
+                                   <div class="text-nowrap">
+                                          <field name="margin_ref" string="Margen $" class="oe_inline" widget="monetary"
+                                                 options="{'currency_field': 'ref_me_currency_id'}"
+                                                 invisible="not is_total_cost_computed"/>
+                                          <span class="oe_inline" 
+                                          invisible="not amount_total_ref">
+                                          (<field name="margin_percent" nolabel="1" class="oe_inline" widget="percentage"/>)
+                                          </span>
+                                          <span invisible="is_total_cost_computed">TBD</span>
+                                   </div>
+                            </group>
+                            <group class="oe_subtotal_footer" name="order_total" string="Moneda Compañía">
+                                   <field name="amount_tax" force_save="1" widget="monetary"/>
+                                   <div class="oe_subtotal_footer_separator oe_inline o_td_label">
+                                   <label for="amount_total"/>
+                                   </div>
+                                   <field name="amount_total" force_save="1" nolabel="1" class="oe_subtotal_footer_separator" widget="monetary"/>
+                                   <field name="amount_paid" string="Total Paid (with rounding)" class="oe_subtotal_footer_separator" widget="monetary" invisible="amount_paid == 'amount_total'" readonly="state != 'draft'"/>
+                                   <label for="margin"/>
+                                   <div class="text-nowrap">
+                                   <field name="margin" class="oe_inline" invisible="not is_total_cost_computed"/>
+                                   <span class="oe_inline" invisible="not is_total_cost_computed">
+                                          (<field name="margin_percent" nolabel="1" class="oe_inline" widget="percentage"/>)
+                                   </span>
+                                   <span invisible="is_total_cost_computed">TBD</span>
+                                   </div>
+                                   <field name="is_total_cost_computed" invisible="1"/>
+                                   <field name="currency_id" invisible="1"/>
+                            </group>
+                     </group>
+                </xpath>
+
+               <xpath expr="//page[@name='products']//field[@name='lines']//tree//field[@name='price_unit']"
+                       position="after">
+                    <field name="ref_me_currency_id" invisible="1" optional="hide"/>
+                    <field name="session_rate" invisible="1" optional="hide"/>
+                    <field name="price_unit_ref" string="Precio Uni. $" widget="monetary" options="{'currency_field': 'ref_me_currency_id'}"
+                           optional="hide" force_save="1"/>
+                </xpath>
+                <xpath expr="//page[@name='products']//field[@name='lines']//tree//field[@name='total_cost']"
+                       position="after">
+                    <field name="total_cost_ref" string="Costo $" widget="monetary" options="{'currency_field': 'ref_me_currency_id'}"
+                           optional="hide" force_save="1"/>
+                </xpath>
+                <xpath expr="//page[@name='products']//field[@name='lines']//tree//field[@name='margin']"
+                       position="after">
+                    <field name="margin_ref" string="Margen $" widget="monetary" options="{'currency_field': 'ref_me_currency_id'}"
+                           optional="hide" force_save="1"/>
+                </xpath>
+                <xpath expr="//page[@name='products']//field[@name='lines']//tree//field[@name='price_subtotal']"
+                       position="after">
+                    <field name="price_subtotal_ref" string="Subtotal $" widget="monetary"
+                           options="{'currency_field': 'ref_me_currency_id'}"
+                           optional="hide" force_save="1"/>
+                </xpath>
+                <xpath expr="//page[@name='products']//field[@name='lines']//tree//field[@name='price_subtotal_incl']"
+                       position="after">
+                    <field name="price_subtotal_incl_ref" string="Subtotal + IVA $" widget="monetary"
+                           options="{'currency_field': 'ref_me_currency_id'}"
+                           optional="hide" force_save="1"/>
+                </xpath>
+
+                <xpath expr="//page[@name='products']//field[@name='lines']//form//group//field[@name='price_unit']"
+                       position="after">
+                    <field name="ref_me_currency_id" invisible="1"/>
+                    <field name="session_rate" invisible="1"/>
+                    <field name="price_unit_ref" string="Precio Uni. $" widget="monetary" options="{'currency_field': 'ref_me_currency_id'}"
+                           force_save="1"/>
+                </xpath>
+                <xpath expr="//page[@name='products']//field[@name='lines']//form//group//field[@name='price_subtotal']"
+                       position="after">
+                    <field name="price_subtotal_ref" string="Subtotal $" invisible="1" widget="monetary"
+                           options="{'currency_field': 'ref_me_currency_id'}"
+                           force_save="1"/>
+                </xpath>
+                <xpath expr="//page[@name='products']//field[@name='lines']//form//group//field[@name='price_subtotal_incl']"
+                       position="after">
+                    <field name="price_subtotal_incl_ref" string="Subtotal + IVA $" invisible="1" widget="monetary"
+                           options="{'currency_field': 'ref_me_currency_id'}"
+                           force_save="1"/>
+                </xpath>
+
+
+                <xpath expr="//page[@name='payments']//field[@name='payment_ids']//tree//field[@name='amount']"
+                       position="after">
+                    <field name="currency_id_dif" invisible="1"/>
+                    <field name="amount_ref" widget="monetary"
+                           options="{'currency_field': 'currency_id_dif'}"
+                           force_save="1" optional="hide"/>
+                </xpath> 
+
+            </field>
+
+        </record>
+    </data>
+</odoo>

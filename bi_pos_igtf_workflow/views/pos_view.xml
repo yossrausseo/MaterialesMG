@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="res_config_settings_view_form" model="ir.ui.view">
+            <field name="name">res.config.settings.view.form.inherit</field>
+            <field name="model">res.config.settings</field>
+            <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form" />
+            <field name="arch" type="xml">
+                <xpath expr="//block[@id='pos_interface_section']" position="before">
+                    <h2>POS IGTF Configuration</h2>
+                    <div class="row mt16 o_settings_container" id="igtf_journal_id_bi">
+                        <div id="igtf_journal_id" class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_right_pane">
+                                <span class="o_form_label">POS IGTF Journal</span>
+                                <div class="content-group mt16">
+                                    <field name="igtf_journal_id"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt16 o_settings_container" id="igtf_tax_name">
+                        <div id="igtf_tax" class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_right_pane">
+                                <span class="o_form_label">IGTF Tax%</span>
+                                <div class="content-group mt16">
+                                    <field name="igtf_tax"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="inherit_view_account_journal_pos_user_form1" model="ir.ui.view">
+            <field name="name">inherit_bi_account_journal_form</field>
+            <field name="model">account.journal</field>
+            <field name="inherit_id" ref="account.view_account_journal_form"/>
+            <field name="arch" type="xml">
+                <field name="type" position="after">
+                    <field name="is_igtf"/>
+                </field>
+            </field>
+        </record>
+
+        <record id="inherit_view_pp_pos_payment_method_form" model="ir.ui.view">
+            <field name="name">pos.payment.method.inherit</field>
+            <field name="model">pos.payment.method</field>
+            <field name="inherit_id" ref="point_of_sale.pos_payment_method_view_form"/>
+            <field name="arch" type="xml">
+                <field name="journal_id" position="after">
+                    <field name="is_igtf"/>
+                </field>
+            </field>
+        </record>
+
+
+        <record id="pos_order_view" model="ir.ui.view">
+            <field name="name">pos.order.view.inherit</field>
+            <field name="model">pos.order</field>
+            <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//page[@name='notes']" position="after">
+                     <page string="IGTF Info" name="igtf_info">
+                        <group >
+                            <field name="igtf_order_tax"/>
+                            <field name="payment_method_id"/>
+                            <field name="igtf_amount"/>
+                            <field name="total_amount_with_igtf"/>
+                            <field name="igtf_journal_id"/>     
+                        </group>
+                    </page>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

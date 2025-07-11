@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+<t t-name="TicketScreen" t-inherit="point_of_sale.TicketScreen" t-inherit-mode="extension">
+    <xpath expr="//t[@t-esc='getTotal(order)']//..//.." position="replace">
+        <div class="col wide p-2">
+            <div><t t-esc="getTotal(order)"/> / <span class="text-danger"><t t-esc="getTotalRef(order)"/> $</span></div>
+        </div>
+    </xpath>
+    <!--xpath expr="//OrderWidget" position="attributes">
+       <attribute name="totalRef">_selectedSyncedOrder.get_total_with_tax()</attribute>
+        <attribute name="taxRef">_selectedSyncedOrder.get_total_tax()</attribute>
+    </xpath>
+
+    <xpath expr="//OrderWidget" position="inside">
+        <t t-set="totalRef" t-value="totalRef"/>
+        <t t-set="taxRef" t-value="taxRef"/>
+        <t t-set="Subtotal" t-value="totalRef - taxRef"/>
+    </xpath-->
+</t>
+</templates>

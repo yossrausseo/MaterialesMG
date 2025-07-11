@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record model="ir.ui.view" id="product_product_stock_tree_inherit_usd">
+        <field name="name">product.product.stock.tree.inherit.usd</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="stock.product_product_stock_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='avg_cost']" position="after">
+                <field name="currency_id_dif" invisible="1"/>
+                <field name="avg_cost_usd" optional="show"/>
+            </xpath>
+             <xpath expr="//field[@name='total_value']" position="after">
+                <field name="total_value_usd" optional="show" sum="Valor total $"/>
+            </xpath>
+            <xpath expr="//field[@name='avg_cost']" position="after">
+                <field name="avg_price_usd" optional="show"/>
+            </xpath>
+             <xpath expr="//field[@name='total_value']" position="after">
+                <field name="total_sale_value_usd" optional="show" sum="Valor total $"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

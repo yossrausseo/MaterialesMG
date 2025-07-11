@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="igtf_product" model="product.template">
+            <field name="name">IGTF Product</field>
+            <field name="detailed_type">service</field>
+            <field name="list_price">0.00</field>
+            <field name="standard_price">0.00</field>
+            <field name="default_code">bi_igtf</field>
+            <field name="available_in_pos">True</field>
+            <field name="taxes_id" eval="[(6, 0, [])]"/>
+        </record>
+    </data>
+</odoo>
+

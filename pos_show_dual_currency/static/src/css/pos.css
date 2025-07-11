@@ -1,0 +1,41 @@
+.pos .product .currency {
+    position: absolute;
+    top: 20px;
+    right: 2px;
+    vertical-align: top;
+    color: red;
+    line-height: 13px;
+    background: #affcd6;
+    padding: 2px 5px;
+    border-radius: 2px;
+    font-weight: bold;
+    font-size: x-small;
+}
+
+@media screen and (min-width: 768px) {
+    .screen .left-content {
+        max-width: 40%
+    }
+}
+
+.cash-move-popup {
+    top: 30% !important;
+}
+
+
+.pos .close-pos-popup .closing-notes {
+    font-style: italic;
+    font-weight: 350;
+    box-sizing: border-box;
+    line-height: 20px;
+    width: 70%;
+    min-width: 50%;
+    min-height: 100px;
+    resize: none;
+}
+
+.pos .close-pos-popup .payment-methods-overview table {
+    width: 100%;
+    text-align: left;
+    font-size: medium;
+}

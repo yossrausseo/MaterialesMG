@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-inherit="point_of_sale.ClosePosPopup" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('total-orders')]//span[hasclass('amount')]" position="after">
+            <t t-if="pos.config.show_currency_rate!=0">
+                <t t-set="trm" t-value="1/pos.config.show_currency_rate"/>
+                <!-- <t t-set="trm" t-value="pos.config.show_currency_rate"/> -->
+            </t>
+            <t t-else="">
+                <t t-set="trm" t-value="1"/>
+            </t>
+            <span style="color: red;">/</span>
+            <span style="color: red;" t-esc="pos.format_currency_ref(props.orders_details.amount / trm)"/>
+        </xpath>
+
+        <xpath expr="//td[@t-esc='env.utils.formatCurrency(props.default_cash_details.opening)']" position="after">
+            <t t-if="trm!=0">
+                <td>
+                    <span style="color: red;">/ </span>
+                    <span style="color: red;"
+                    t-esc="pos.format_currency_ref(props.default_cash_details.opening / trm)"/>
+                </td>
+            </t>
+        </xpath>
+
+        <xpath expr="//tr[@t-foreach='props.default_cash_details.moves']" position="inside">
+            <t t-if="trm!=0">
+                <td>
+                    <span style="color: red;">/ </span>
+                    <span style="color: red;"
+                          t-esc="pos.format_currency_ref(Math.abs(move.amount) / trm)"/>
+                </td>
+            </t>
+        </xpath>
+
+        <xpath expr="//tbody[hasclass('cash-overview')]" position="before">
+            <tbody>
+                <tr>
+                    <td t-esc="props.default_cash_details.default_cash_details_ref.name"/>
+                    <td>
+                        <span style="color: red;"
+                            t-esc="pos.format_currency_ref(props.default_cash_details.default_cash_details_ref.amount)"/>
+                        <t t-if="trm!=0">
+                                <span>/</span>
+                            <t t-esc="env.utils.formatCurrency(Math.abs(props.default_cash_details.default_cash_details_ref.amount)/trm)"/>
+                        </t>
+                    </td>
+
+                    <td class="d-flex">
+                        <Input tModel="[state.payments_usd[props.default_cash_details.default_cash_details_ref.id], 'counted']"/>
+                        <div class="button icon ClosePosPopup btn btn-secondary" t-on-click="openDetailsPopupUSD">
+                            <i class="fa fa-money fa-2x" role="img" title="Open the money details popup"/>
+                        </div>
+                    </td>
+                    <td t-att-class="{'warning text-danger fw-bolder': getDifferenceUSD(props.default_cash_details.default_cash_details_ref.id)}">
+                        <t t-esc="pos.format_currency_ref(getDifferenceUSD(props.default_cash_details.default_cash_details_ref.id))"/>
+                        <t t-if="trm!=0">
+                            <span>/</span>
+                            <t t-esc="env.utils.formatCurrency(Math.abs(getDifferenceUSD(props.default_cash_details.default_cash_details_ref.id)) * trm)"/>
+                        </t>
+                        
+                    </td>
+                </tr>
+            </tbody>
+        </xpath>
+
+        <xpath expr="//tbody[hasclass('cash-overview')]" position="after">
+            <tbody class="cash-overview border-start small text-muted">
+                <tr style="color: red;">
+                    <td>Currency Ref Opening</td>
+                    <td t-esc="pos.format_currency_ref(props.default_cash_details.default_cash_details_ref.opening)"/>
+                    <t t-if="trm!=0">
+                        <td>
+                            <span style="color: #4A4F59;">/</span>
+                            <span style="color: #4A4F59;"
+                                    t-esc="env.utils.formatCurrency(Math.abs(props.default_cash_details.default_cash_details_ref.opening) * trm)"/>
+                        </td>
+                    </t>
+                    
+                </tr>
+                <tr style="color: red;" t-foreach="props.default_cash_details.default_cash_details_ref.moves" t-as="move"
+                    t-key="move_index">
+                        <td>
+                            <div class="flex">
+                                <div class="cash-sign" t-esc="move.amount &lt; 0 ? '-' : '+'"/>
+                                <t t-esc="move.name"/>
+                            </div>
+                        </td>
+                    <td style="color: red;" t-esc="pos.format_currency_ref(Math.abs(move.amount))"/>
+                    <t t-if="trm!=0">
+                            <td>
+                                <span style="color: #4A4F59;">/</span>
+                                <span style="color: #4A4F59;"
+                                      t-esc="env.utils.formatCurrency(Math.abs(move.amount) * trm)"/>
+                            </td>
+                    </t>
+                </tr>
+                <tr t-if="props.default_cash_details.default_cash_details_ref.payment_amount">
+                    <td>
+                        <div class="flex">
+                            <div class="cash-sign"
+                                    t-esc="props.default_cash_details.default_cash_details_ref.payment_amount &lt; 0 ? '-' : '+'"/>
+                            Payments in
+                            <t t-esc="props.default_cash_details.default_cash_details_ref.name"/>
+                        </div>
+                    </td>
+                    
+                    <td style="color: red;"
+                        t-esc="pos.format_currency_ref(Math.abs(props.default_cash_details.default_cash_details_ref.payment_amount))"/>
+                    
+                    <t t-if="trm!=0">
+                            <td>
+                                <span style="color: #4A4F59;">/</span>
+                                <span style="color: #4A4F59;"
+                                      t-esc="env.utils.formatCurrency(Math.abs(props.default_cash_details.default_cash_details_ref.payment_amount) * trm)"/>
+                            </td>
+                    </t>
+                    
+                </tr>
+            </tbody>
+        </xpath>
+
+        <xpath expr="//td[@t-esc='env.utils.formatCurrency(Math.abs(props.default_cash_details.payment_amount))']"
+               position="after">
+            <t t-if="trm!=0">
+                <td style="color: red;"
+                    t-esc="pos.format_currency_ref(Math.abs(props.default_cash_details.payment_amount)/trm)"/>
+            </t>
+        </xpath>
+
+        <xpath expr="//td[@t-esc='env.utils.formatCurrency(props.default_cash_details.amount)']"
+               position="replace">
+                <td>
+                    <span t-esc="env.utils.formatCurrency(props.default_cash_details.amount)"/>
+                    <t t-if="trm!=0">
+                        <span style="color: red;">/</span>
+                        <span style="color: red;"
+                              t-esc="pos.format_currency_ref(props.default_cash_details.amount / trm)"/>
+                    </t>
+                </td>
+        </xpath>
+
+        <xpath expr="//td[@t-esc='env.utils.formatCurrency(getDifference(props.default_cash_details.id))']"
+               position="replace">
+                <td t-att-class="{'warning text-danger fw-bolder': !env.utils.floatIsZero(getDifference(props.default_cash_details.id))}">
+                    <span t-esc="env.utils.formatCurrency(getDifference(props.default_cash_details.id))"/>
+                    <t t-if="trm!=0">
+                        <span style="color: red;">/</span>
+                        <span style="color: red;"
+                              t-esc="pos.format_currency_ref(getDifference(props.default_cash_details.id) / trm)"/>
+                    </t>
+                </td>
+        </xpath>
+
+    </t>
+</templates>

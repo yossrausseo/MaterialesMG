@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Reemplazar completamente la plantilla del POS por la tuya -->
+    <template id="point_of_sale.report_invoice_document" inherit_id="account.report_invoice_document">
+        <xpath expr="//t[@t-call='account.report_invoice_document']" position="after">
+            <t t-call="soltevic_free_form.print_free_form_avanti"/>
+        </xpath>
+    </template>
+</odoo>

@@ -1,0 +1,162 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* soltevic_free_form
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 16.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-11-15 18:14+0000\n"
+"PO-Revision-Date: 2023-11-15 18:14+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: soltevic_free_form
+#: model:ir.actions.report,print_report_name:soltevic_free_form.action_print_free_form_avanti
+msgid "'Free Form Invoice'"
+msgstr "'Factura Forma Libre'"
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid ""
+"<span>\n"
+"                                Este documento se emite a cuenta de tercero de conformidad a lo establecido en el artículo 10 del Decreto-Ley del IVA.\n"
+"                            </span>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<span>Cantidad</span>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<span>Descripción</span>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<span>Impuesto</span>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<span>Precio Unit.</span>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<span>Total</span>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid ""
+"<strong class=\"text-center\">Scan me with your banking app.</strong>\n"
+"                    <br/>\n"
+"                    <br/>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<strong>Amount Due</strong>"
+msgstr "Monto Adeudado"
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<strong>Comercial:</strong>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<strong>Condición:</strong>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<strong>Código Cliente:</strong>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<strong>Dirección:</strong>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<strong>Documento Afectado:</strong>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<strong>Factura No:</strong>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<strong>Fecha Emisión:</strong>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<strong>Fecha Vence:</strong>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<strong>Fecha de documento:</strong>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<strong>Nombre:</strong>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<strong>Nota de Credito No:</strong>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<strong>Nota de Debito No:</strong>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<strong>RIF:</strong>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<strong>Teléfono:</strong>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "<strong>Total</strong>"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti
+msgid "BORRADOR"
+msgstr ""
+
+#. module: soltevic_free_form
+#: model:ir.actions.report,name:soltevic_free_form.action_print_free_form_avanti
+msgid "Free Form Invoice"
+msgstr "Factura Forma Libre"
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "Paid on"
+msgstr "Pagado en"
+
+#. module: soltevic_free_form
+#: model_terms:ir.ui.view,arch_db:soltevic_free_form.print_free_form_avanti_document
+msgid "Por favor, use el siguiente número para comunicar su pago :"
+msgstr ""

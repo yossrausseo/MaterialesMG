@@ -1,0 +1,408 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="print_nota_document">
+        <style>
+            /* Importar fuente Lato desde Google Fonts */
+            @import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;500;700&amp;display=swap');
+            
+            /* Estilos mejorados para header/footer */
+            @page {
+                margin: 100px 50px 80px 50px;
+                size: A4;
+                @top-left {
+                    content: element(header);
+                }
+                @bottom-center {
+                    content: element(footer);
+                }
+            }
+            
+            /* Aplicar Lato a todo el documento */
+            body, div, span, p, table, td, th, .header, .footer, .page {
+                font-family: 'Lato', sans-serif !important;
+            }
+        </style>
+
+        <div class="header" style="margin-top: 1cm;">
+            <!-- Tabla con diseño mejorado -->
+            <table border="0" cellspacing="0" cellpadding="0" style="width: 100%; border: 1px solid #e0e0e0; border-radius: 6px; border-collapse: separate;                      border-spacing: 2; background: #f9fafb; box-shadow: 0 2px 6px rgba(0,0,0,0.03);                      margin-bottom: 6px;">
+                <tr>
+                    <!-- Columna de información (70%) -->
+                    <td style="width: 70%; vertical-align: top; padding: 10px; border-right: 1px solid #f0f0f0; color: #666666;">
+                        <!-- Línea única: Nombre y VAT con espacio reducido -->
+                        <div style="display: block; margin-bottom: 4px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                                <path d="M19 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3Z" stroke="#666666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M9 7H15" stroke="#666666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M9 11H15" stroke="#666666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M9 15H13" stroke="#666666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span style="display: inline-block; vertical-align: middle; font-size: 16px; font-weight: 700; margin-right: 10px; color: #666666;" t-field="doc.company_id.name"/>
+                            <span style="display: inline-block; vertical-align: middle; font-size: 16px; font-weight: 500; color: #666666;" t-field="doc.company_id.vat"/>
+                        </div>
+                        
+                        <!-- Dirección compacta -->
+                        <div style="display: block; margin-bottom: 2px; line-height: 1.3; color: #666666;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                                <path d="M21 10C21 17 12 23 12 23C12 23 3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.364 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="#666666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" stroke="#666666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span style="display: inline-block; vertical-align: middle; font-size: 12px; color: #666666;">
+                                Dirección: <span t-field="doc.company_id.street"/>
+                                <t t-if="doc.company_id.street2">, <span t-field="doc.company_id.street2"/></t>
+                            </span>
+                        </div>
+                        <div style="display: block; margin-bottom: 2px; line-height: 1.3; color: #666666;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                                <path d="M21 10C21 17 12 23 12 23C12 23 3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.364 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="#666666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" stroke="#666666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span style="display: inline-block; vertical-align: middle; font-size: 12px; color: #666666;">
+                                Dirección: <span/>
+                                <t t-if="doc.company_id.city"><span t-field="doc.company_id.city"/></t>
+                                <t t-if="doc.company_id.state_id">, <span t-field="doc.company_id.state_id.name"/></t>
+                                <t t-if="doc.company_id.zip">, <span t-field="doc.company_id.zip"/></t>
+                                <t t-if="doc.company_id.country_id">, <span t-field="doc.company_id.country_id.name"/></t>
+                            </span>
+                        </div>
+                        
+                        <!-- Teléfono compacto -->
+                        <div style="display: block; margin-bottom: 1px; line-height: 1.3; color: #666666;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                                <path d="M5 4H9L11 9L8.5 10.5C9.57096 12.6715 11.3285 14.429 13.5 15.5L15 13L20 15V19C20 19.5304 19.7893 20.0391 19.4142 20.4142C19.0391 20.7893 18.5304 21 18 21C14.0993 20.763 10.4202 19.1065 7.65683 16.3432C4.8935 13.5798 3.23705 9.90074 3 6C3 5.46957 3.21071 4.96086 3.58579 4.58579C3.96086 4.21071 4.46957 4 5 4Z" stroke="#666666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span style="display: inline-block; vertical-align: middle; margin-right: 8px; color: #666666; font-size: 12px;">Teléfono:</span>
+                            <span style="display: inline-block; vertical-align: middle; font-size: 12px; color: #666666;" t-field="doc.company_id.phone"></span>
+                        </div>
+                        
+                        <!-- Título centrado en negro -->
+                        <div style="display: block; margin-top: 8px; margin-bottom: 0; text-align: center;">
+                            <span style="display: inline-block; vertical-align: middle; font-size: 20px; color: #000000; font-weight: bold;">NOTA DE ENTREGA</span>
+                        </div>
+                    </td>
+                    
+                    <!-- Columna del logo (30%) -->
+                    <td style="width: 30%; text-align: center; vertical-align: middle; padding: 8px;">
+                        <div style="height: 100%; display: flex; align-items: center; justify-content: center;">
+                            <img t-if="doc.company_id.logo" t-att-src="image_data_uri(doc.company_id.logo)" style="max-height: 90px; max-width: 100%; object-fit: contain;"/>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="footer">
+            <div style="border-top: 1px solid #e0e0e0; padding-top: 15px; margin-top: 20px; text-align: center;">
+                <!-- Primera línea: Correo electrónico -->
+                <div style="margin-bottom: 4px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                        <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M22 6L12 13L2 6" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span style="display: inline-block; vertical-align: middle; font-size: 18px; color: #4b5563;" t-field="doc.company_id.email"></span>
+                </div>
+                
+                <!-- Segunda línea: Paginación -->
+                <div style="font-size: 18px; color: #6b7280;">
+                    <span>Página </span>
+                    <span class="page" style="font-weight: 600;"/>
+                    <span> de </span>
+                    <span class="topage" style="font-weight: 600;"/>
+                </div>
+            </div>
+        </div>
+        
+        <div class="page">
+            <div id="encabezado" class="row" style="font-size: 8.5pt;">
+                <div class="col-8">
+                    <div class="row">
+                        <div class="col-auto">
+                            <strong>Nombre/Razón Social:</strong>
+                            <span class="m-0" t-field="doc.partner_id.name"/>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-auto">
+                            <strong>Dirección:</strong>
+                            <span class="m-0" t-field="doc.partner_id.contact_address_complete"/>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <strong>Teléfono:</strong>
+                            <span class="m-0" t-field="doc.partner_id.phone"/>
+                        </div>
+                        <div class="col-6 text-right">
+                            <t t-set="vat" t-if="doc.partner_id.rif" t-value="doc.partner_id.rif"/>
+                            <t t-set="vat" t-elif="doc.partner_id.vat" t-value="doc.partner_id.vat"/>
+                            <t t-set="vat" t-elif="doc.partner_id.nationality and doc.partner_id.identification_id" 
+                               t-value="(doc.partner_id.nationality + doc.partner_id.identification_id).upper()"/>
+                            <t t-set="vat" t-else="" t-value="False"/>
+                            <t t-if="not vat">
+                                <t t-set="vat" t-if="doc.partner_id.parent_id.rif" t-value="doc.partner_id.parent_id.rif"/>
+                                <t t-set="vat" t-elif="doc.partner_id.parent_id.vat" t-value="doc.partner_id.parent_id.vat"/>
+                                <t t-set="vat" t-elif="doc.partner_id.parent_id.nationality and doc.partner_id.parent_id.identification_id" 
+                                   t-value="(doc.partner_id.parent_id.nationality + doc.partner_id.parent_id.identification_id).upper()"/>
+                                <t t-set="vat" t-else="" t-value="False"/>
+                            </t>
+                            <strong>CI/RIF:</strong>
+                            <span class="m-0" t-if="vat" t-esc="vat"/>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="row">
+                        <div class="col-auto">
+                            <t t-if="doc.move_type == 'out_invoice' and doc.debit_origin_id.id ">
+                                <strong>Nota de Debito No:</strong>
+                            </t>
+                            <t t-elif="doc.move_type == 'out_invoice' ">
+                                <strong>Nota de Entrega No:</strong>
+                            </t>
+                            <t t-elif="doc.move_type == 'out_refund' ">
+                                <strong>Nota de Crédito No:</strong>
+                            </t>
+                            <span class="m-0 float-right" t-field="doc.name"/>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-auto">
+                            <t t-set="sale_order" t-value="doc.line_ids.sale_line_ids.order_id"/>
+                            <t t-if="len(sale_order) &gt; 1">
+                                <t t-set="sale_order" t-value="sale_order[0]"/>
+                            </t>
+                            <strong>Pedido No:</strong>
+                            <span class="m-0 float-right" t-esc="sale_order.name"/>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-auto">
+                            <strong>Fecha Emisión:</strong>
+                            <span class="m-0 float-right" t-field="doc.invoice_date"/>
+                        </div>
+                    </div>
+                    <t t-if="doc.move_type == 'out_invoice' and doc.debit_origin_id.id == false ">
+                        <div class="row">
+                            <div class="col-auto">
+                                <strong>Fecha de Vencimiento:</strong>
+                                <span class="m-0 float-right" t-field="doc.invoice_date_due"/>
+                            </div>
+                        </div>
+                    </t>
+                    <t t-if="doc.move_type == 'out_refund' ">
+                        <div class="row">
+                            <div class="col-auto">
+                                <strong>Documento Afectado:</strong>
+                                <span class="m-0 float-right" t-field="doc.reversed_entry_id.name"/>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-auto">
+                                <strong>Fecha de documento:</strong>
+                                <span class="m-0 float-right" t-field="doc.reversed_entry_id.invoice_date"/>
+                            </div>
+                        </div>
+                    </t>
+                    <t t-if="doc.move_type == 'out_invoice' and doc.debit_origin_id.id ">
+                        <div class="row">
+                            <div class="col-auto">
+                                <strong>Documento Afectado:</strong>
+                                <span class="m-0 float-right" t-field="doc.debit_origin_id.name"/>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-auto">
+                                <strong>Fecha de documento:</strong>
+                                <span class="m-0 float-right" t-field="doc.debit_origin_id.invoice_date"/>
+                            </div>
+                        </div>
+                    </t>
+                </div>
+            </div>
+            <table class="table table-sm o_main_table mt-2" name="invoice_line_table">
+                <thead>
+                    <tr style="font-size: 8.5pt;">
+                        <th name="th_description" class="text-left">
+                            <span>Descripción</span>
+                        </th>
+                        <th name="th_barcode" class="text-end">
+                            <span>Código de barra</span>
+                        </th>                        
+                        <th name="th_quantity" class="text-end">
+                            <span>Cantidad</span>
+                        </th>
+                        <th name="th_priceunit" t-attf-class="text-end">
+                            <span>Precio Unit.</span>
+                        </th>
+                        <th name="th_taxes" t-attf-class="text-left">
+                            <span>Impuesto</span>
+                        </th>
+                        <th name="th_subtotal" class="text-end">
+                            <span>Total</span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="invoice_tbody">
+                    <t t-set="current_subtotal" t-value="0"/>
+                    <t t-set="lines" t-value="doc.invoice_line_ids.sorted(key=lambda l: (-l.sequence, l.date, l.move_name, -l.id), reverse=True)"/>
+                    <t t-foreach="lines" t-as="line">
+                        <t t-set="current_subtotal" t-value="current_subtotal + line.price_subtotal"/>
+                        <t t-if="'IGTF' not in (line.product_id.default_code or '')">
+                            <tr style="line-height:15px; font-size: 8.5pt;">
+                                <td>
+                                    <span t-field="line.product_id.name"/>
+                                </td>
+                                <td>
+                                    <span t-field="line.product_id.barcode"/>
+                                </td>
+                                <td class="text-end">
+                                    <span t-field="line.quantity"/>
+                                    <span t-field="line.product_uom_id" groups="uom.group_uom"/>
+                                </td>
+                                <td class="text-end">
+                                    <span class="text-nowrap" t-field="line.price_unit"/>
+                                </td>
+                                <td>
+                                    <span t-esc="', '.join(map(lambda x: (x.description or x.name), line.tax_ids))" id="line_tax_ids"/>
+                                </td>
+                                <td class="text-end o_price_total">
+                                    <span class="text-nowrap" t-field="line.price_subtotal"/>
+                                </td>
+                            </tr>
+                        </t>
+                    </t>
+                </tbody>
+            </table>
+
+            <div style="position: absolute; top: 700px; width: 300px; right: 0;">
+                <table class="table table-sm" style="page-break-inside: avoid; width: 100%; font-size: 8.5pt; margin-top: 0.5rem;">
+                    <tr class="border-black o_subtotal">
+                        <td><strong><span t-out="'Subtotal'"/></strong></td>
+                        <td class="text-end o_price_total">
+                            <span t-field="doc.amount_untaxed_bs"/>
+                        </td>
+                    </tr>
+                    <t t-set="tax_totals" t-value="doc.tax_totals"/>
+                    <t t-foreach="tax_totals['subtotals']" t-as="subtotal">
+                        <t t-set="subtotal_to_show" t-value="subtotal['name']"/>
+                        <t t-set="type_currency" t-value="'BS'"/>
+                        <t t-call="soltevic_free_form.tax_groups_totals"/>
+                    </t>
+                    <t t-set="igtf_lines" t-value="doc.invoice_line_ids.filtered(lambda l: 'IGTF' in (l.product_id.default_code or '') or 'IGTF' in (l.product_id.name or ''))"/>
+                    <t t-set="igtf_total" t-value="sum(igtf_lines.mapped('price_subtotal'))"/>
+                    
+                    <t t-if="igtf_total > 0">
+                        <tr>
+                            <td>IGTF</td>
+                            <td class="text-end">
+                                <span t-esc="igtf_total"  t-options='{"widget": "monetary", "display_currency": doc.company_id.currency_id}'/>
+                            </td>
+                        </tr>
+                    </t>
+                    <tr class="border-black o_total">
+                        <td><strong>Total</strong></td>
+                        <td class="text-end">
+                            <span class="text-nowrap" t-field="doc.amount_total_bs"/>
+                        </td>
+                    </tr>
+                    <t t-if="doc.payment_state != 'invoicing_legacy'">
+                        <t t-set="payments_vals" t-value="doc.sudo().invoice_payments_widget and doc.sudo().invoice_payments_widget['content'] or []"/>
+                        <t t-foreach="payments_vals" t-as="payment_vals">
+                            <tr t-if="payment_vals['is_exchange'] == 0">
+                                <td>
+                                    <i class="oe_form_field text-end oe_payment_label">
+                                        Pagado por: <span t-out="payment_vals['pos_payment_name']"/>
+                                    </i>
+                                </td>
+                                <td class="text-end">
+                                    <span t-out="payment_vals['amount']" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'>20.00</span>
+                                </td>
+                            </tr>
+                        </t>
+                        <t t-if="len(payments_vals) > 0">
+                            <tr class="border-black fw-bold">
+                                <td>Total a pagar</td>
+                                <td class="text-end">
+                                    <span t-field="doc.amount_residual">11.05</span>
+                                </td>
+                            </tr>
+                        </t>
+                    </t>
+                </table>
+            </div>
+
+            <p t-if="doc.fiscal_position_id.note" name="note">
+                <span t-field="doc.fiscal_position_id.note"/>
+            </p>
+            <div id="qrcode" t-if="doc.display_qr_code">
+                <p t-if="qr_code_urls.get(doc.id)">
+                    <strong class="text-center">Scan me with your banking app.</strong>
+                    <br/>
+                    <br/>
+                    <img class="border border-dark rounded" t-att-src="qr_code_urls[doc.id]"/>
+                </p>
+            </div>
+        </div>
+    </template>
+
+    <template id="tax_groups_totals">
+        <t t-foreach="tax_totals['groups_by_subtotal'][subtotal_to_show]" t-as="amount_by_group">
+            <t t-set="tax_group_name" t-value="amount_by_group['tax_group_name']"/>
+            <t t-set="tax_group_amount" t-value="amount_by_group['tax_group_amount']"/>
+            
+            <t t-set="should_hide_tax" t-value="False"/>
+            
+            <t t-if="tax_group_amount == 0 and doc.invoice_line_ids.filtered(lambda l: 'IGTF' in (l.product_id.default_code or '') or 'IGTF' in (l.product_id.name or ''))">
+                <t t-set="should_hide_tax" t-value="True"/>
+            </t>
+
+            <t t-if="not should_hide_tax">
+                <tr>
+                    <td><span class="text-nowrap" t-esc="amount_by_group['tax_group_name']"/></td>
+                    <td class="text-end o_price_total">
+                        <t t-set="amount" t-value="amount_by_group['tax_group_amount']"/>
+                        <t t-if="type_currency == 'USD'">
+                            <t t-if="doc.currency_id.name=='USD'">
+                                <span class="text-nowrap" t-esc="amount" t-options='{"widget": "monetary", "display_currency": doc.company_id.currency_id_dif}' />
+                            </t>
+                            <t t-else="">
+                                <span class="text-nowrap" t-esc="(amount/doc.tax_today)" t-options='{"widget": "monetary", "display_currency": doc.company_id.currency_id_dif}' />
+                            </t>
+                        </t>
+                        <t t-if="type_currency == 'BS'">
+                            <t t-if="doc.currency_id.name=='USD'">
+                                <span class="text-nowrap" t-esc="(amount*doc.tax_today)" t-options='{"widget": "monetary", "display_currency": doc.company_id.currency_id}' />
+                            </t>
+                            <t t-else="">
+                                <span class="text-nowrap" t-esc="amount" t-options='{"widget": "monetary", "display_currency": doc.company_id.currency_id}' />
+                            </t>
+                        </t>
+                    </td>
+                </tr>
+            </t>
+        </t>
+    </template>
+
+    <template id="print_nota">
+        <t t-foreach="docs" t-as="doc">
+            <t t-if="doc.state == 'draft'">
+                <div class="header" >
+                    <div style="
+                    position:absolute;
+                    opacity:0.25;
+                    z-index:1000;
+                    transform:rotate(300deg);
+                    -webkit-transform:rotate(300deg);
+                    width:150%;">
+                        <p style="font-size:100px;">BORRADOR</p>
+                    </div>
+                </div>
+            </t>
+            <t t-set="barcode_print" t-value="True"/>
+            <t t-call="web.basic_layout">
+                <t t-call="soltevic_free_form.print_nota_document"/>
+                <p style="page-break-after: always;"/>
+            </t>
+        </t>
+    </template>
+</odoo>

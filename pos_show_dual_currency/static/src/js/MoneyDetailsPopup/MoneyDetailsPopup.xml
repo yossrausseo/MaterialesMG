@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="pos_show_dual_currency.MoneyDetailsPopupUSD" owl="1">
+        <div class="popup money-details">
+            <div class="modal-header">
+                <h4 class="modal-title">Coins/Bills (USD)</h4>
+            </div>
+            <main class="modal-body">
+                <t t-set="billsUSD" t-value="Object.keys(state.moneyDetailsRef).map(Number).sort((a, b) => b - a)"/>
+                <div class="row">
+                    <t t-foreach="billsUSD" t-as="moneyValue" t-key="moneyValue" class="col-6">
+                        <div class="d-flex align-items-center justify-content-between my-2">
+                            <NumericInput
+                                class="'form-control w-50'"
+                                value="state.moneyDetailsRef[moneyValue]"
+                                onChange="(value) => state.moneyDetailsRef[moneyValue] = value"
+                                min="0"
+                            />
+                            <label class="text-nowrap ms-2">
+                                <span class="fw-bold"><t t-esc="moneyValue"/></span>
+                                <span><t t-esc="props.currencyRefSymbol || '$'"/></span>
+                            </label>
+                        </div>
+                    </t>
+                </div>
+                <h4 class="total-section rounded py-2 mt-3 bg-light text-center">
+                    Total: 
+                    <span class="fw-bold">
+                        <t t-esc="computeTotal()"/> 
+                        <t t-esc="props.currencyRefSymbol || '$'"/>
+                    </span>
+                </h4>
+            </main>
+            <footer class="footer footer-flex modal-footer">
+                <button class="btn btn-lg btn-secondary" t-on-click="cancel">Discard</button>
+                <button class="btn btn-lg btn-primary" t-on-click="confirm">Confirm</button>
+            </footer>
+        </div>
+    </t>
+</templates>

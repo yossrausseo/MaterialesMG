@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+	
+	<t t-name="OrderReceipt_Service" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension" owl="1">
+		<!-- <xpath expr="//div[hasclass('pos-receipt-amount')]" position="replace">
+		<t t-if = "env.services.pos.config.igtf_tax">			
+			<div class="pos-receipt-amount">
+				<t t-if="igtf_amount">
+					IGTF TAX 
+					<span class="pos-receipt-right-align" t-esc="env.utils.formatCurrency(igtf_amount)" />
+					<div class="pos-receipt-amount">
+						TOTAL
+						<span t-esc="props.formatCurrency(props.data.amount_total+igtf_amount)" class="pos-receipt-right-align"/>
+					</div>
+				</t>
+				<t t-else="">
+					<div class="pos-receipt-amount">
+						TOTAL
+						<span t-esc="props.formatCurrency(props.data.amount_total)" class="pos-receipt-right-align"/>
+					</div>
+				</t>
+			</div>
+			<br/>    
+	    </t>
+		</xpath> -->
+		<xpath expr="//OrderWidget" position="before">
+			<div class="row">
+				<div class="col-6">
+					<span>Factura</span>
+				</div>
+				<div class="col-6"></div>
+			</div>
+			<div class="row">
+				<div class="col-6">
+					<span>Fecha: <t t-esc="props.data.date" /></span>
+				</div>
+				<div class="col-6"></div>
+			</div>
+		</xpath>
+	</t>
+
+	<t t-name="bi_pos_igtf_workflow.ReceiptHeader" t-inherit="point_of_sale.ReceiptHeader" t-inherit-mode="extension" owl="1">
+        <xpath expr="//div[hasclass('pos-receipt-contact')]" position="replace">
+			<div class="pos-receipt-contact" style="width:100%;font-size:14px; color:black;">
+				<h3>Seniat</h3>
+				<t t-if="props.data.company.vat">
+					<h5>RIF <t t-esc="props.data.company.vat" /></h5>
+				</t>
+				<div>
+					<t t-if="props.data.company.street"><span t-esc="props.data.company.street"/>,</t>
+					<t t-if="props.data.company.street2"><span t-esc="props.data.company.street2"/>,</t>
+					<t t-if="props.data.company.city"><span t-esc="props.data.company.city"/>,</t>
+					<t t-if="props.data.company.state_id"><span t-esc="props.data.company.state_id[1]"/>,</t>
+					<t t-if="props.data.company.country_id"><span t-esc="props.data.company.country_id[1]"/>,</t>
+				</div>
+				<t t-if="props.data.company.phone">
+					<div>Zona Postal: <t t-esc="props.data.company.zip"/></div>
+				</t>
+			<br/>
+			</div>
+			<t t-set="partner" t-value="props.data.partner"/>
+			<div t-if="partner.company_type =='company'">
+				<span>R.I.F./C.I: </span>
+				<span><t t-esc="partner.vat or partner.rif or '-'"/> </span>
+			</div>
+			<div t-if="partner.company_type =='person'">
+				<span>R.I.F./ C.I: </span>
+				<span><t t-esc="partner.identification_id or '-'"/> </span>
+			</div>
+			<div>
+				<span>RAZON SOCIAL: </span>
+				<span><t t-esc="partner.name"/></span>
+			</div>
+			<div>
+				<span>TOT PRODUCTOS: <span><t t-esc="props.data.quantityProduct"/></span></span>
+			</div>
+			<br/>
+			<h3 class="text-center">Factura</h3>
+        </xpath>
+
+    </t>
+</templates>
+
+

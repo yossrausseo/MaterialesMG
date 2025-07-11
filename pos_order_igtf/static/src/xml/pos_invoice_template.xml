@@ -1,0 +1,9 @@
+<templates id="template" xml:space="preserve">
+    <t t-extend="PosInvoice">
+        <t t-jquery=".header" t-operation="replace">
+            <div class="header">
+                <h1>Tu Encabezado Personalizado en Vista Previa</h1>
+            </div>
+        </t>
+    </t>
+</templates>

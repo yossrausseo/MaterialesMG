@@ -1,0 +1,45 @@
+<odoo>
+    <record id="view_pos_pos_form_inherit" model="ir.ui.view">
+        <field name="name">pos.order.view.form.inherit</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
+        <field name="arch" type="xml">
+            <page name="payments" position="after">
+                <page name="igtf" string="IGTF">
+                    <group string="Detalle de Pagos con IGTF">
+                        <!-- Tabla de pagos con IGTF -->
+                        <field name="igtf_payment_lines" readonly="1">
+                            <tree editable="bottom">
+                                <field name="payment_method_id"/>
+                                <field name="base_amount"/>
+                                <field name="base_amount_usd"/>
+                                <field name="igtf_percentage"/>
+                                <field name="igtf_amount"/>
+                                <field name="igtf_amount_usd"/>
+                            </tree>
+                        </field>
+                    </group>
+                    <group>
+                        <!-- Totales en moneda local -->
+                        <group string="Totales en Moneda Local">
+                            <field name="company_currency_id" invisible="1"/>
+                            <field name="tax_base_igtf" string="Base Imponible Total" widget="monetary" options="{'currency_field': 'company_currency_id'}"/>
+                            <field name="total_igtf" string="IGTF Total" widget="monetary" options="{'currency_field': 'company_currency_id'}"/>
+                            <field name="total_amount" string="Total Pedido" widget="monetary" options="{'currency_field': 'company_currency_id'}"/>
+                            <field name="total_amount_igtf" string="Total Pedido + IGTF" widget="monetary" options="{'currency_field': 'company_currency_id'}" class="oe_subtotal_footer"/>
+                        </group>
+                        
+                        <!-- Totales en USD -->
+                        <group string="Totales en USD">
+                            <field name="currency_id_dif" invisible="1"/>
+                            <field name="tax_base_igtf_usd" string="Base Imponible Total" widget="monetary" options="{'currency_field': 'currency_id_dif'}"/>
+                            <field name="total_igtf_usd" string="IGTF Total" widget="monetary" options="{'currency_field': 'currency_id_dif'}"/>
+                            <field name="total_amount_usd" string="Total Pedido" widget="monetary" options="{'currency_field': 'currency_id_dif'}"/>
+                            <field name="total_amount_igtf_usd" string="Total Pedido + IGTF" widget="monetary" options="{'currency_field': 'currency_id_dif'}" class="oe_subtotal_footer"/>
+                        </group>
+                    </group>
+                </page>
+            </page>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,16 @@
+<odoo>
+    <data>
+        <!-- Heredamos la vista kanban del POS -->
+        <record id="view_pos_config_kanban_inherit" model="ir.ui.view">
+            <field name="name">pos.config.kanban.inherit</field>
+            <field name="model">pos.config</field>
+            <field name="inherit_id" ref="point_of_sale.view_pos_config_kanban"/>
+            <field name="arch" type="xml">
+                <!-- Modificamos la parte que muestra el balance -->
+                <xpath expr="//div[hasclass('o_kanban_primary_right')]/div[2]" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

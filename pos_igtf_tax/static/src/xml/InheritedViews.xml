@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="reprinting_popup" xml:space="preserve">
+    <t t-name="IGTFAmount" t-inherit="point_of_sale.PaymentScreenStatus" t-inherit-mode="extension" owl="1">
+        <div class="payment-status-total-due py-2 fs-3 text-muted" position="after">
+            <div class="payment-status-total-due">
+                <span class="label">Monto IGTF </span>
+                <strong t-esc="env.utils.formatCurrency(props.order.x_igtf_amount)" />
+                <!-- <span> Bs.F</span> -->
+            </div>
+        </div>
+    </t>
+    <t t-name="Paymentlines" t-inherit="point_of_sale.PaymentScreenMethods" t-inherit-mode="extension">
+        <!-- <div class="paymentlines d-flex flex-column" position="attributes">
+            <attribute name="t-att-class">line.payment_method.x_is_foreign_exchange ? 'igtf-payment' : ''</attribute>
+        </div> -->
+        <xpath expr="//div[hasclass('payment-method-display')]" position="attributes">
+            <attribute name="t-att-class">paymentMethod.x_is_foreign_exchange ? 'igtf-payment' : ''</attribute>
+        </xpath>
+    </t>
+    <!-- <t t-name="PaymentName" t-inherit="point_of_sale.PaymentScreenMethods" t-inherit-mode="extension">
+        <span class="payment-name" position="attributes">
+            <attribute name="t-att-class">paymentMethod.x_is_foreign_exchange ? 'igtf-payment' : ''</attribute>
+        </span >
+    </t> -->
+</templates>
