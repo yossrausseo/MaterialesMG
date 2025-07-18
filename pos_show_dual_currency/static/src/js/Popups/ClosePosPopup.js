@@ -2,16 +2,13 @@
 import { ClosePosPopup } from "@point_of_sale/app/navbar/closing_popup/closing_popup";
 import { patch } from "@web/core/utils/patch";
 import { useState } from "@odoo/owl";
+import { MoneyDetailsPopupUSD } from "@pos_show_dual_currency/js/MoneyDetailsPopup/MoneyDetailsPopup";
 import { _t } from "@web/core/l10n/translation";
 import { parseFloat } from "@web/views/fields/parsers";
 import { ConnectionLostError } from "@web/core/network/rpc_service";
+import { ErrorPopup } from "@point_of_sale/app/errors/popups/error_popup";
 
-// Añadir las nuevas propiedades al componente
-ClosePosPopup.props = [
-    ...ClosePosPopup.props,
-    'default_cash_details_ref',
-    'amount_authorized_diff_ref'
-];
+ClosePosPopup.props.push('amount_authorized_diff_ref');
 
 patch(ClosePosPopup.prototype, {
     setup() {
@@ -21,126 +18,116 @@ patch(ClosePosPopup.prototype, {
     },
 
     getInitialState() {
-        const initialState = { 
-            notes: "", 
-            payments: {}, 
-            cashDetailsRef: {
-                counted: "0",
-                moneyDetailsRef: {}  // Almacenará el desglose de billetes
-            }
-        };
-        
+
+        const initialState = { notes: "", payments: {}, payments_usd: {} };
         if (this.pos.config.cash_control) {
-            if (this.props.default_cash_details) {
+
+            // Se asegura de que default_cash_details y su ID existan antes de usarlos.
+            if (this.props.default_cash_details && this.props.default_cash_details.id) {
                 initialState.payments[this.props.default_cash_details.id] = {
                     counted: "0",
                 };
             }
-            
-            if (this.props.default_cash_details_ref) {
-                initialState.cashDetailsRef = {
-                    ...this.props.default_cash_details_ref,
-                    counted: this.props.default_cash_details_ref.amount.toString()
+            if (this.props.default_cash_details.default_cash_details_ref && this.props.default_cash_details.default_cash_details_ref.id) {
+                initialState.payments_usd[this.props.default_cash_details.default_cash_details_ref.id] = {
+                    counted: "0",
                 };
             }
         }
 
         this.props.other_payment_methods.forEach((pm) => {
-            initialState.payments[pm.id] = {
-                counted: this.env.utils.formatCurrency(pm.amount, false),
-            };
+            // Se elimina el filtro `if (pm.type === "bank")` y se añade una guarda.
+            if (pm && pm.id) {
+                initialState.payments[pm.id] = {
+                    counted: this.env.utils.formatCurrency(pm.amount, false),
+                };
+            }
         });
 
         return initialState;
     },
 
-    // IMPLEMENTAR MÉTODO FALTANTE
-    _getExpectedAmount(paymentId) {
-        if (paymentId === this.props.default_cash_details?.id) {
-            return this.props.default_cash_details.amount;
-        } else {
-            const pm = this.props.other_payment_methods.find(pm => pm.id === paymentId);
-            return pm ? pm.amount : 0;
-        }
-    },
-
     getDifference(paymentId) {
-        if (!this.state.payments || 
-            !this.state.payments[paymentId] || 
-            !this.state.payments[paymentId].counted) {
+        // Guarda de seguridad: si el ID es nulo/undefined o no existe en el estado,
+        // la diferencia es 0.
+        if (!paymentId || !this.state.payments[paymentId]) {
             return 0;
         }
-        
-        const counted = parseFloat(this.state.payments[paymentId].counted || "0");
-        const expectedAmount = this._getExpectedAmount(paymentId);
-        return counted - expectedAmount;
+        // Si todo es seguro, se llama a la función original.
+        return super.getDifference(...arguments);
     },
 
-    getDifferenceUSD() {
-        if (!this.props.default_cash_details_ref || 
-            !this.state.cashDetailsRef || 
-            !this.state.cashDetailsRef.counted) {
-            return 0;
-        }
-        
-        const counted = parseFloat(this.state.cashDetailsRef.counted || "0");
-        const expectedAmount = this.props.default_cash_details_ref.amount;
+    getDifferenceUSD(paymentId) {
+        const counted = this.state.payments_usd[paymentId].counted;
+        const expectedAmount =
+            paymentId === this.props.default_cash_details?.default_cash_details_ref.id
+                ? this.props.default_cash_details.default_cash_details_ref.amount
+                : this.props.other_payment_methods.find((pm) => pm.id === paymentId).amount;
+
         return counted - expectedAmount;
     },
 
     async openDetailsPopupUSD() {
-        const action = _t("Cash control - USD");
-        this.pos.hardwareProxy?.openCashbox(action);
-        
+        const action = _t("Cash control - opening");
+        this.hardwareProxy.openCashbox(action);
         const { confirmed, payload } = await this.popup.add(MoneyDetailsPopupUSD, {
-            title: _t("USD Cash Details"),
-            moneyDetailsRef: this.state.cashDetailsRef.moneyDetailsRef,
+            moneyDetailsRef: this.moneyDetailsRef,
             action: action,
-            currencyRefSymbol: this.currency_ref.symbol // Pasar el símbolo
         });
-        
         if (confirmed) {
-            // Actualizar estado con los nuevos valores
-            this.state.cashDetailsRef.counted = payload.total;
-            this.state.cashDetailsRef.moneyDetailsRef = payload.moneyDetailsRef;
-            
-            if (payload.moneyDetailsNotes) {
-                this.state.notes = payload.moneyDetailsNotes;
+            const { total, moneyDetailsRef, moneyDetailsNotes } = payload;
+            this.state.payments_usd[this.props.default_cash_details.default_cash_details_ref.id].counted = total;
+            if (moneyDetailsNotes) {
+                if (this.state.openingCash && this.state.notes) {
+                    this.state.notes += moneyDetailsNotes;
+                } else {
+                    this.state.notes = moneyDetailsNotes;
+                }
             }
+            this.moneyDetailsRef = moneyDetailsRef;
         }
     },
-    
-    hasDifferenceUSD() {
-        if (!this.props.default_cash_details_ref) return false;
-        return !this.env.utils.floatIsZero(
-            this.getDifferenceUSD(),
-            this.pos.currency_ref.decimal_places
-        );
-    },
-    
-    amountAuthorizedDiffUSD() {
-        return this.props.amount_authorized_diff_ref || 0;
-    },
-    
-    hasUserAuthorityUSD() {
-        return Math.abs(this.getDifferenceUSD()) <= this.amountAuthorizedDiffUSD();
-    },
 
+    //@override
+    async confirm() {
+        if (!this.cashControl || !this.hasDifferenceUSD()) {
+            super.confirm();
+        } else if (this.hasUserAuthorityUSD()) {
+            const { confirmed } = await this.showPopup('ConfirmPopup', {
+                title: _t('Currency Ref Payments Difference'),
+                body: _t('Do you want to accept currency ref payments difference and post a profit/loss journal entry?'),
+            });
+            if (confirmed) {
+                super.confirm();
+            }
+        } else {
+            await this.showPopup('ConfirmPopup', {
+                title: _t('Currency Ref Payments Difference'),
+                body: _.str.sprintf(
+                    _t('The maximum difference by currency ref allowed is %s.\n\
+                            Please contact your manager to accept the closing difference.'),
+                    this.pos.format_currency_ref(this.amountAuthorizedDiffUSD)
+                ),
+                confirmText: _t('OK'),
+            })
+        }
+    },
     async closeSession() {
         this.customerDisplay?.update({ closeUI: true });
+        // If there are orders in the db left unsynced, we try to sync.
         const syncSuccess = await this.pos.push_orders_with_closing_popup();
         if (!syncSuccess) {
             return;
         }
-        
-        if (this.pos.config.cash_control && this.props.default_cash_details_ref) {
+        if (this.pos.config.cash_control) {
             const response = await this.orm.call(
                 "pos.session",
                 "post_closing_cash_details_ref",
                 [this.pos.pos_session.id],
                 {
                     counted_cash: parseFloat(
-                        String(this.state.cashDetailsRef.counted)
+                        //this.state.payments_usd[this.props.default_cash_details.default_cash_details_ref.id].counted
+                        String(this.state.payments_usd[this.props.default_cash_details.default_cash_details_ref.id].counted)
                     ),
                 }
             );
@@ -156,11 +143,15 @@ patch(ClosePosPopup.prototype, {
                 this.state.notes,
             ]);
         } catch (error) {
-            if (!error.data || error.data.message !== "This session is already closed.") {
+            // We have to handle the error manually otherwise the validation check stops the script.
+            // In case of "rescue session", we want to display the next popup with "handleClosingError".
+            // FIXME
+            if (!error.data && error.data.message !== "This session is already closed.") {
                 throw error;
             }
         }
 
         super.closeSession();
-    }
-});
+    },
+
+})

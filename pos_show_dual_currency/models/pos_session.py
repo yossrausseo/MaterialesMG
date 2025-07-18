@@ -52,27 +52,15 @@ class PosSession(models.Model):
                                                 readonly=True)
 
     def set_cashbox_pos_usd(self, cashbox_value, notes):
-        # Asegurar que el valor sea en USD
-        if self.ref_me_currency_id != self.env.ref('base.USD'):
-            raise UserError(_("La moneda de referencia debe ser USD"))
-        
-        # Calcular diferencia correctamente
-        current_balance = self.cash_register_balance_start_mn_ref or 0.0
-        difference = cashbox_value - current_balance
-        
-        # Actualizar saldo inicial USD
         self.cash_register_balance_start_mn_ref = cashbox_value
-        
-        # Solo crear ajuste si hay diferencia
-        if not float_is_zero(difference, precision_rounding=self.ref_me_currency_id.rounding):
-            self.sudo()._post_statement_difference_usd(difference)
-        
-        self._post_cash_details_message_usd('Opening', difference, notes)
-        
+        if not self.ref_me_currency_id.is_zero(cashbox_value):
+            self.sudo()._post_statement_difference_usd(cashbox_value, opening=True)
+        self._post_cash_details_message_usd('Opening Balance Set', cashbox_value, notes)
+
     def _post_cash_details_message_usd(self, state, difference, notes):
         message = ""
         if difference:
-            message = f"{state} difference: " \
+            message = f"{state}: " \
                       f"{self.ref_me_currency_id.symbol + ' ' if self.ref_me_currency_id.position == 'before' else ''}" \
                       f"{self.ref_me_currency_id.round(difference)} " \
                       f"{self.ref_me_currency_id.symbol if self.ref_me_currency_id.position == 'after' else ''}<br/>"
@@ -111,307 +99,205 @@ class PosSession(models.Model):
         currency_ref = self._get_pos_ui_res_currency_ref(params)
         loaded_data['res_currency_ref'] = currency_ref
         super(PosSession, self)._pos_data_process(loaded_data)
-    
+
     def try_cash_in_out_ref_currency(self, _type, amount, reason, extras, currency_ref):
         sign = 1 if _type == 'in' else -1
-        sessions = self.filtered('me_ref_cash_journal_id')
-        if not sessions:
-            raise UserError(_("There is no cash payment method for this PoS Session"))
-        
-        self.env['account.bank.statement.line'].create([
-            {
+        for session in self:
+            ref_cash_journal = session.config_id.payment_method_ids.filtered(
+                lambda pm: pm.is_cash_count and pm.currency_id == session.ref_me_currency_id
+            )[:1].journal_id
+
+            if not ref_cash_journal:
+                raise UserError(_("There is no cash payment method for the reference currency in this PoS Session"))
+
+            self.env['account.bank.statement.line'].create({
                 'pos_session_id': session.id,
-                'journal_id': session.me_ref_cash_journal_id.id,
+                'journal_id': ref_cash_journal.id,
                 'amount': sign * amount,
                 'date': fields.Date.context_today(self),
                 'payment_ref': '-'.join([session.name, extras['translatedType'], reason]),
                 'currency_id': session.ref_me_currency_id.id,
-            }
-            for session in sessions
-        ])
+            })
 
         message_content = [f"Cash {extras['translatedType']}", f'- Amount: {extras["formattedAmount"]}']
         if reason:
             message_content.append(f'- Reason: {reason}')
         self.message_post(body='<br/>\n'.join(message_content))
-    
+
     @api.depends('config_id', 'payment_method_ids')
     def _compute_cash_journal(self):
         super(PosSession, self)._compute_cash_journal()
         for session in self:
             session.me_ref_cash_journal_id = False
-            
-            # Filtrar solo métodos de pago en efectivo que coincidan con la moneda de referencia
             cash_journal_ref = session.payment_method_ids.filtered(
-                lambda p: p.is_cash_count and p.currency_id == session.ref_me_currency_id
-            )
-            
-            if cash_journal_ref:
-                session.me_ref_cash_journal_id = cash_journal_ref[0].journal_id
+                lambda p: p.is_cash_count and p.currency_id == session.ref_me_currency_id)[:1].journal_id
+            if not cash_journal_ref:
+                continue
+            session.me_ref_cash_journal_id = cash_journal_ref
 
     def get_closing_control_data(self):
-        closing_control_data = super(PosSession, self).get_closing_control_data()
+        """
+        Solución definitiva que previene el TypeError de forma robusta.
+        1. Usa super() para obtener una estructura de props válida y evitar el OwlError.
+        2. RECONSTRUYE la lista 'other_payment_methods' desde cero, incluyendo solo
+        métodos que NO son de efectivo, para garantizar que no haya datos "sucios".
+        3. RECALCULA los detalles del efectivo con la lógica ya validada.
+        """
         self.ensure_one()
-        
-        # Asegurar estructura básica
-        if 'default_cash_details' not in closing_control_data:
-            closing_control_data['default_cash_details'] = {
-                'name': None,
-                'amount': 0,
-                'opening': 0,
-                'moves': [],
-                'payment_amount': 0,
-                'id': None,
-            }
-        
-        orders = self.order_ids.filtered(lambda o: o.state in ['paid', 'invoiced'])
-        payments = orders.payment_ids.filtered(lambda p: p.payment_method_id.type != "pay_later")
 
-        # Método de pago en USD
-        cash_payment_method_ref = self.payment_method_ids.filtered(
-            lambda pm: pm.type == 'cash' and pm.currency_id == self.ref_me_currency_id
-        )[:1]
+        # PASO 1: OBTENER LA ESTRUCTURA BASE VÁLIDA DE ODOO.
+        closing_control_data = super(PosSession, self).get_closing_control_data()
+
+        # PASO 2: IDENTIFICAR TODOS LOS MÉTODOS DE EFECTIVO QUE NO DEBEN ESTAR EN LA LISTA 'other_payment_methods'.
+        # Usamos 'is_cash_count' que es el indicador correcto para el TPV.
+        cash_pm_ids = self.payment_method_ids.filtered(lambda pm: pm.is_cash_count).ids
         
-        # Calcular pagos en USD
-        total_ref_payment = 0
-        if cash_payment_method_ref:
-            total_ref_payment = sum(
-                payments.filtered(
-                    lambda p: p.payment_method_id == cash_payment_method_ref
-                ).mapped('amount_ref')
-            )
+        # PASO 3: RECONSTRUIR COMPLETAMENTE 'other_payment_methods' CON DATOS LIMPIOS.
+        # Este es el cambio clave que erradica el TypeError.
+        orders = self.order_ids.filtered(lambda o: o.state in ['paid', 'invoiced'])
+        payments = orders.payment_ids.filtered(lambda p: p.payment_method_id.type != 'pay_later')
         
-        # Obtener sesión anterior para USD
-        last_session_ref = self.search([
-            ('config_id', '=', self.config_id.id),
-            ('id', '!=', self.id),
-            ('state', '=', 'closed')
-        ], order='stop_at desc', limit=1) if cash_payment_method_ref else None
-        
-        # Movimientos de efectivo en USD
-        cash_moves_ref = []
-        total_moves_ref = 0
-        if cash_payment_method_ref:
-            for move in self.statement_line_ids.filtered(
-                lambda s: s.currency_id == self.ref_me_currency_id and 
-                        s.journal_id == self.me_ref_cash_journal_id
-            ):
-                total_moves_ref += move.amount
-                cash_moves_ref.append({
-                    'name': move.payment_ref,
-                    'amount': move.amount
+        clean_other_pms_data = []
+        # Iteramos sobre todos los métodos de pago de la sesión.
+        for pm in self.payment_method_ids:
+            # Si el ID del método actual NO está en nuestra lista de métodos de efectivo...
+            if pm.id not in cash_pm_ids:
+                # ...entonces es seguro agregarlo a la lista de "otros".
+                pm_payments = payments.filtered(lambda p: p.payment_method_id.id == pm.id)
+                clean_other_pms_data.append({
+                    'id': pm.id,
+                    'name': pm.name,
+                    'amount': sum(pm_payments.mapped('amount')),
+                    'type': pm.type,
                 })
         
-        # Crear objeto para USD
-        closing_control_data['default_cash_details_ref'] = {
-            'name': cash_payment_method_ref.name if cash_payment_method_ref else "",
-            'amount': (last_session_ref.cash_register_balance_end_real_mn_ref if last_session_ref else 0) 
-                    + total_ref_payment,
-            'opening': self.cash_register_balance_start_mn_ref,
-            'moves': cash_moves_ref,
-            'payment_amount': total_ref_payment,
-            'id': cash_payment_method_ref.id if cash_payment_method_ref else None,
-        }
-        
-        # Propiedad requerida por el frontend
-        closing_control_data['amount_authorized_diff_ref'] = (
-            self.config_id.amount_authorized_diff_ref 
-            if self.config_id.set_maximum_difference 
-            else 0
+        # Reemplazamos la lista potencialmente contaminada de super() con nuestra lista 100% limpia.
+        closing_control_data['other_payment_methods'] = clean_other_pms_data
+
+        # PASO 4: RECALCULAR LOS DETALLES DE EFECTIVO CON LA LÓGICA QUE YA SABEMOS QUE FUNCIONA.
+        main_currency = self.currency_id
+        ref_currency = self.ref_me_currency_id
+        main_cash_pm = self.payment_method_ids.filtered(
+            lambda pm: pm.is_cash_count and (not pm.currency_id or pm.currency_id == main_currency)
+        )[:1]
+        ref_cash_pm = self.payment_method_ids.filtered(
+            lambda pm: pm.is_cash_count and pm.currency_id == ref_currency
+        )[:1]
+
+        # --- Moneda Principal (Bs) ---
+        main_cash_payments_amount = sum(payments.filtered(lambda p: p.payment_method_id == main_cash_pm).mapped('amount'))
+        main_statement_lines = self.statement_line_ids.filtered(
+            lambda st: st.journal_id == self.cash_journal_id and (not st.currency_id or st.currency_id == main_currency)
         )
+        main_cash_moves_list = [{'name': move.payment_ref, 'amount': move.amount} for move in main_statement_lines.sorted('create_date')]
+        main_cash_moves_amount = sum(move['amount'] for move in main_cash_moves_list)
+        expected_amount_main = self.cash_register_balance_start + main_cash_payments_amount + main_cash_moves_amount
+
+        # --- Moneda de Referencia (USD) ---
+        ref_cash_payments_amount = sum(payments.filtered(lambda p: p.payment_method_id == ref_cash_pm).mapped('amount'))
+        ref_statement_lines = self.statement_line_ids.filtered(
+            lambda st: st.currency_id == ref_currency and st.payment_ref != _("Cash In (Opening Balance)")
+        )
+        ref_cash_moves_list = [{'name': move.payment_ref, 'amount': move.amount} for move in ref_statement_lines.sorted('create_date')]
+        ref_cash_moves_amount = sum(move['amount'] for move in ref_cash_moves_list)
+        expected_amount_ref = self.cash_register_balance_start_mn_ref + ref_cash_payments_amount + ref_cash_moves_amount
+        
+        # PASO 5: REEMPLAZAR Y AÑADIR NUESTROS DATOS CALCULADOS EN LA ESTRUCTURA FINAL.
+        default_cash_details = {
+            'id': main_cash_pm.id if main_cash_pm else None,
+            'name': main_cash_pm.name if main_cash_pm else _('Cash'),
+            'opening': self.cash_register_balance_start,
+            'payment_amount': main_cash_payments_amount,
+            'moves': main_cash_moves_list,
+            'amount': expected_amount_main,
+            'default_cash_details_ref': {
+                'id': ref_cash_pm.id if ref_cash_pm else None,
+                'name': ref_cash_pm.name if ref_cash_pm else _('Cash (USD)'),
+                'opening': self.cash_register_balance_start_mn_ref,
+                'payment_amount': ref_cash_payments_amount,
+                'moves': ref_cash_moves_list,
+                'amount': expected_amount_ref,
+            }
+        }
+
+        closing_control_data['default_cash_details'] = default_cash_details
+        closing_control_data['amount_authorized_diff_ref'] = self.config_id.amount_authorized_diff_ref if self.config_id.cash_control else None
         
         return closing_control_data
-
+    
     def post_closing_cash_details_ref(self, counted_cash):
-        # Solo actualizar si hay un valor válido
-        if counted_cash is not None:
-            self.cash_register_balance_end_real_mn_ref = counted_cash
+        print(counted_cash)
+        self.cash_register_balance_end_real_mn_ref = counted_cash
         return {'successful': True}
-     
-    def _post_statement_difference_usd(self, amount):
-        if not self.me_ref_cash_journal_id:
-            return
+
+    def _post_statement_difference_usd(self, amount, opening=False):
+        self.ensure_one()
+        if self.ref_me_currency_id and not self.ref_me_currency_id.is_zero(amount):
+            ref_cash_journal = self.config_id.payment_method_ids.filtered(
+                lambda pm: pm.is_cash_count and pm.currency_id == self.ref_me_currency_id
+            )[:1].journal_id
+
+            if not ref_cash_journal:
+                raise UserError(_("The reference currency cash journal is not found for %s.", self.ref_me_currency_id.name))
+
+            if opening:
+                account_id = ref_cash_journal.profit_account_id
+                payment_ref = _("Cash In (Opening Balance)")
+                if not account_id:
+                     raise UserError(_("Please configure the 'Profit Account' for the journal '%s' to set an opening balance.", ref_cash_journal.name))
+            elif amount < 0:
+                account_id = ref_cash_journal.loss_account_id
+                payment_ref = _("Cash difference observed during the counting (Loss)")
+                if not account_id:
+                    raise UserError(_("Please configure the 'Loss Account' for the journal '%s'.", ref_cash_journal.name))
+            else:
+                account_id = ref_cash_journal.profit_account_id
+                payment_ref = _("Cash difference observed during the counting (Profit)")
+                if not account_id:
+                    raise UserError(_("Please configure the 'Profit Account' for the journal '%s'.", ref_cash_journal.name))
             
-        # Crear línea contable EN USD
-        st_line_vals = {
-            'journal_id': self.me_ref_cash_journal_id.id,
-            'amount': amount,
-            'date': fields.Date.context_today(self),
-            'pos_session_id': self.id,
-            'currency_id': self.ref_me_currency_id.id,
-            'payment_ref': _("Diferencia de cierre USD (%s)") % ('Ganancia' if amount >= 0 else 'Pérdida'),
-            'counterpart_account_id': self.me_ref_cash_journal_id.profit_account_id.id if amount >= 0 
-                                    else self.me_ref_cash_journal_id.loss_account_id.id,
-        }
-        self.env['account.bank.statement.line'].create(st_line_vals)
-            
+            self.env['account.bank.statement.line'].create({
+                'journal_id': ref_cash_journal.id,
+                'amount': amount,
+                'date': self.start_at.date() if opening else (self.stop_at.date() if self.stop_at else fields.Date.context_today(self)),
+                'payment_ref': payment_ref,
+                'pos_session_id': self.id,
+                'counterpart_account_id': account_id.id,
+                'currency_id': self.ref_me_currency_id.id,
+            })
         
     def update_closing_control_state_session_ref(self, notes):
         self._post_cash_details_message_usd('Closing', self.cash_register_difference_ref, notes)
-    
-    @api.depends('payment_method_ids', 'order_ids', 'cash_register_balance_start_mn_ref')
+
+    @api.depends('payment_method_ids', 'order_ids', 'statement_line_ids', 'cash_register_balance_end_real_mn_ref')
     def _compute_cash_balance_ref(self):
+        # Hacemos una búsqueda para obtener todos los pagos y líneas de extracto relevantes a la vez
+        payments = self.env['pos.payment'].search([('session_id', 'in', self.ids)])
+        statement_lines = self.env['account.bank.statement.line'].search([('pos_session_id', 'in', self.ids)])
+
+        # Agrupamos los resultados por session_id para un acceso rápido
+        payments_by_session = {s_id: list(p) for s_id, p in groupby(payments, key=lambda p: p.session_id.id)}
+        lines_by_session = {s_id: list(l) for s_id, l in groupby(statement_lines, key=lambda l: l.pos_session_id.id)}
+
         for session in self:
-            cash_payment_method = session.payment_method_ids.filtered(
-                lambda p: p.is_cash_count and p.currency_id == session.ref_me_currency_id
-            )[:1]
-            
-            if not cash_payment_method:
-                session.cash_register_total_entry_encoding_ref = 0.0
-                session.cash_register_balance_end_ref = 0.0
-                session.cash_register_difference_ref = 0.0
-                continue
-                
-                
-            # SOLO PAGOS EN USD
-            total_ref_payment = sum(
-                session.env['pos.payment'].search([
-                    ('session_id', '=', session.id),
-                    ('payment_method_id', '=', cash_payment_method.id),
-                    ('currency_id', '=', session.ref_me_currency_id.id)  # Filtro por moneda
-                ]).mapped('amount_ref')
-            )
-            
-            last_session = session.search([
-                ('config_id', '=', session.config_id.id),
-                ('id', '!=', session.id),
-                ('state', '=', 'closed')
-            ], order='stop_at desc', limit=1)
-            
-            # SOLO MOVIMIENTOS EN USD
-            session.cash_register_total_entry_encoding_ref = (
-                sum(session.statement_line_ids.filtered(
-                    lambda s: s.currency_id == session.ref_me_currency_id and
-                              s.journal_id == session.me_ref_cash_journal_id
-                ).mapped('amount')) 
-                + (0.0 if session.state == 'closed' else total_ref_payment)
-            )
-            
-            session.cash_register_balance_end_ref = (
-                (last_session.cash_register_balance_end_real_mn_ref if last_session else 0.0) 
-                + session.cash_register_total_entry_encoding_ref
-            )
-            
-            if session.cash_register_balance_end_real_mn_ref is not False:
-                session.cash_register_difference_ref = (
-                    session.cash_register_balance_end_real_mn_ref 
-                    - session.cash_register_balance_end_ref
-                )
-            else:
-                session.cash_register_difference_ref = 0.0
-    
-    def close_session_from_ui_ref(self, bank_payment_method_diff_pairs=None):
-        bank_payment_method_diffs = dict(bank_payment_method_diff_pairs or [])
-        self.ensure_one()
-        # Even if this is called in `post_closing_cash_details`, we need to call this here too for case
-        # where cash_control = False
-        check_closing_session = self._cannot_close_session_ref(bank_payment_method_diffs)
-        if check_closing_session:
-            return check_closing_session
+            cash_payment_method_ids = session.payment_method_ids.filtered(
+                lambda pm: pm.is_cash_count and pm.currency_id == session.ref_me_currency_id
+            ).ids
 
-        validate_result = self.action_pos_session_closing_control_ref(
-            bank_payment_method_diffs=bank_payment_method_diffs)
+            session_payments = payments_by_session.get(session.id, [])
+            total_payment_amount = sum(p.amount for p in session_payments if p.payment_method_id.id in cash_payment_method_ids)
 
-        # If an error is raised, the user will still be redirected to the back end to manually close the session.
-        # If the return result is a dict, this means that normally we have a redirection or a wizard => we redirect the user
-        if isinstance(validate_result, dict):
-            # imbalance accounting entry
-            return {
-                'successful': False,
-                'message': validate_result.get('name'),
-                'redirect': True
-            }
+            session_lines = lines_by_session.get(session.id, [])
+            total_cash_in_out = sum(l.amount for l in session_lines if l.currency_id == session.ref_me_currency_id)
 
-        self.message_post(body='Point of Sale Session ended')
+            session.cash_register_total_entry_encoding_ref = total_payment_amount + total_cash_in_out
+            session.cash_register_balance_end_ref = session.cash_register_total_entry_encoding_ref
+            session.cash_register_difference_ref = session.cash_register_balance_end_real_mn_ref - session.cash_register_balance_end_ref
 
-        return {'successful': True}
-
-    def _cannot_close_session_ref(self, bank_payment_method_diffs=None):
-        bank_payment_method_diffs = bank_payment_method_diffs or {}
-        if any(order.state == 'draft' for order in self.order_ids):
-            return {'successful': False, 'message': _("You cannot close the POS when orders are still in draft"),
-                    'redirect': False}
-        if self.state == 'closed':
-            return {'successful': False, 'message': _("This session is already closed."), 'redirect': True}
-        if bank_payment_method_diffs:
-            no_loss_account = self.env['account.journal']
-            no_profit_account = self.env['account.journal']
-            for payment_method in self.env['pos.payment.method'].browse(bank_payment_method_diffs.keys()):
-                journal = payment_method.journal_id
-                compare_to_zero = self.ref_me_currency_id.compare_amounts(
-                    bank_payment_method_diffs.get(payment_method.id), 0)
-                if compare_to_zero == -1 and not journal.loss_account_id:
-                    no_loss_account |= journal
-                elif compare_to_zero == 1 and not journal.profit_account_id:
-                    no_profit_account |= journal
-            message = ''
-            if no_loss_account:
-                message += _("Need loss account for the following journals to post the lost amount: %s\n",
-                             ', '.join(no_loss_account.mapped('name')))
-            if no_profit_account:
-                message += _("Need profit account for the following journals to post the gained amount: %s",
-                             ', '.join(no_profit_account.mapped('name')))
-            if message:
-                return {'successful': False, 'message': message, 'redirect': False}
-
-    def action_pos_session_closing_control_ref(self, balancing_account=False, amount_to_balance=0,
-                                               bank_payment_method_diffs=None):
-        self._check_currency_consistency()
-        bank_payment_method_diffs = bank_payment_method_diffs or {}
-        for session in self:
-            if any(order.state == 'draft' for order in session.order_ids):
-                raise UserError(_("You cannot close the POS when orders are still in draft"))
-            if session.state == 'closed':
-                raise UserError(_('This session is already closed.'))
-            session.write({'state': 'closing_control', 'stop_at': fields.Datetime.now()})
-            if not session.config_id.cash_control:
-                return session.action_pos_session_close_ref(balancing_account, amount_to_balance,
-                                                            bank_payment_method_diffs)
-            # If the session is in rescue, we only compute the payments in the cash register
-            # It is not yet possible to close a rescue session through the front end, see `close_session_from_ui`
-            if session.rescue and session.config_id.cash_control:
-                default_cash_payment_method_id = self.payment_method_ids.filtered(
-                    lambda pm: pm.type == 'cash' and pm.payment_method_id.currency_id == self.ref_me_currency_id)[0]
-                orders = self.order_ids.filtered(lambda o: o.state == 'paid' or o.state == 'invoiced')
-                total_cash = sum(
-                    orders.payment_ids.filtered(lambda p: p.payment_method_id == default_cash_payment_method_id).mapped(
-                        'amount')
-                ) + self.cash_register_balance_start_mn_ref
-
-                session.cash_register_balance_end_real_mn_ref = total_cash
-
-            return session.action_pos_session_validate_ref(balancing_account, amount_to_balance,
-                                                           bank_payment_method_diffs)
-
-    def action_pos_session_close_ref(self, balancing_account=False, amount_to_balance=0,
-                                     bank_payment_method_diffs=None):
-        bank_payment_method_diffs = bank_payment_method_diffs or {}
-        # Session without cash payment method will not have a cash register.
-        # However, there could be other payment methods, thus, session still
-        # needs to be validated.
-        return self._validate_session_ref(balancing_account, amount_to_balance, bank_payment_method_diffs)
-        
-    def _validate_session_ref(self, balancing_account=False, amount_to_balance=0, bank_payment_method_diffs=None):
-        bank_payment_method_diffs = bank_payment_method_diffs or {}
-        self.ensure_one()
-        
-        # Verificar si tenemos diario USD
-        if self.me_ref_cash_journal_id and self.ref_me_currency_id:
-            # Calcular diferencia en USD
-            usd_difference = self.cash_register_difference_ref
-            
-            # Solo procesar si hay diferencia significativa
-            if not float_is_zero(usd_difference, precision_rounding=self.ref_me_currency_id.rounding):
-                self.sudo()._post_statement_difference_usd(usd_difference)
-        
-        # Marcar sesión como cerrada
-        self.write({'state': 'closed'})
-        return True
-
-    def action_pos_session_validate_ref(self, balancing_account=False, amount_to_balance=0,
-                                        bank_payment_method_diffs=None):
-        bank_payment_method_diffs = bank_payment_method_diffs or {}
-        return self.action_pos_session_close_ref(balancing_account, amount_to_balance, bank_payment_method_diffs)
+    def _validate_session(self, balancing_account=False, amount_to_balance=0, bank_payment_method_diffs=None):
+        res = super(PosSession, self)._validate_session(balancing_account, amount_to_balance, bank_payment_method_diffs)
+        self.sudo()._post_statement_difference_usd(self.cash_register_difference_ref)
+        return res
 
     def _loader_params_pos_session(self):
         search_params = super(PosSession, self)._loader_params_pos_session()
@@ -420,18 +306,7 @@ class PosSession(models.Model):
         return search_params
 
     def action_pos_session_open(self):
-        for session in self:
-            # Solo manejar USD si existe el diario
-            if session.me_ref_cash_journal_id:
-                # IMPORTANTE: Mantener USD en su propia moneda
-                last_session = self.search([...], order='stop_at desc', limit=1)
-                session.cash_register_balance_start_mn_ref = last_session.cash_register_balance_end_real_mn_ref if last_session else 0.0
-                
-                # NO convertir a Bs
-                session.cash_register_balance_start = 0.0  # Forzar 0 en moneda base
-            
-            super(PosSession, session).action_pos_session_open()
-        return True
+        return super(PosSession, self).action_pos_session_open()
 
     @api.depends('config_id')
     def _tax_today(self):
@@ -447,78 +322,50 @@ class PosSession(models.Model):
             },
         }
 
-    def _create_cash_statement_lines_and_cash_move_lines(self, data):
-        # Create the split and combine cash statement lines and account move lines.
-        # `split_cash_statement_lines` maps `journal` -> split cash statement lines
-        # `combine_cash_statement_lines` maps `journal` -> combine cash statement lines
-        # `split_cash_receivable_lines` maps `journal` -> split cash receivable lines
-        # `combine_cash_receivable_lines` maps `journal` -> combine cash receivable lines
-        MoveLine = data.get('MoveLine')
-        split_receivables_cash = data.get('split_receivables_cash')
-        combine_receivables_cash = data.get('combine_receivables_cash')
+    @api.model
+    def create(self, vals_list):
+        new_sessions = super(PosSession, self).create(vals_list)
+        for session in new_sessions:
+            last_session = self.search([
+                ('config_id', '=', session.config_id.id),
+                ('state', '=', 'closed'),
+                ('id', '!=', session.id)
+            ], limit=1, order='stop_at desc')
+            if last_session:
+                session.cash_register_balance_start_mn_ref = last_session.cash_register_balance_end_real_mn_ref
+        return new_sessions
 
-        # handle split cash payments
-        split_cash_statement_line_vals = []
-        split_cash_receivable_vals = []
-        for payment, amounts in split_receivables_cash.items():
-            journal_id = payment.payment_method_id.journal_id.id
-            split_cash_statement_line_vals.append(
-                self._get_split_statement_line_vals(
-                    journal_id,
-                    amounts['amount'],
-                    payment
-                )
+    @api.depends('payment_method_ids', 'order_ids', 'cash_register_balance_start', 'statement_line_ids')
+    def _compute_cash_balance(self):
+        """
+        Calcula el balance de caja esperado únicamente para la moneda principal (ej. Bs).
+        Este método ahora filtra de forma estricta para excluir cualquier transacción que pertenezca a una moneda secundaria (ej. USD).
+        """
+        for session in self:
+            main_currency = session.currency_id
+
+            # Pagos de ventas en la moneda principal
+            main_cash_payment_methods = session.payment_method_ids.filtered(
+                lambda pm: pm.is_cash_count and (not pm.currency_id or pm.currency_id.id == main_currency.id)
             )
-            split_cash_receivable_vals.append(
-                self._get_split_receivable_vals(
-                    payment,
-                    amounts['amount'],
-                    amounts['amount_converted']
-                )
+            total_cash_payment = 0
+            if main_cash_payment_methods:
+                payments = self.env['pos.payment'].search([
+                    ('session_id', '=', session.id),
+                    ('payment_method_id', 'in', main_cash_payment_methods.ids)
+                ])
+                total_cash_payment = sum(payments.mapped('amount'))
+
+            # Movimientos de caja (entradas/salidas) de la moneda principal.
+            # La condición clave es "not st.currency_id" o "st.currency_id == main_currency".
+            # La apertura en USD tiene un currency_id de USD, por lo que será excluida.
+            statement_lines = session.statement_line_ids.filtered(
+                lambda st: st.journal_id == session.cash_journal_id and (not st.currency_id or st.currency_id.id == main_currency.id)
             )
-        # handle combine cash payments
-        combine_cash_statement_line_vals = []
-        combine_cash_receivable_vals = []
-        for payment_method, amounts in combine_receivables_cash.items():
-            if not float_is_zero(amounts['amount'], precision_rounding=self.currency_id.rounding):
-                # USAR MONTO ORIGINAL SIN CONVERSIÓN AUTOMÁTICA
-                amount_to_use = amounts['amount']
-                
-                combine_cash_statement_line_vals.append(
-                    self._get_combine_statement_line_vals(
-                        payment_method.journal_id.id,
-                        amount_to_use,  # Monto original sin conversión
-                        payment_method
-                    )
-                )
-                combine_cash_receivable_vals.append(
-                    self._get_combine_receivable_vals(
-                        payment_method,
-                        amounts['amount'],   # Monto original
-                        amounts['amount_converted']  # Monto convertido (si es necesario)
-                    )
-                )
+            # Excluimos explícitamente las líneas de apertura de la moneda de referencia si por alguna razón se colaron.
+            ref_opening_line = statement_lines.filtered(lambda st: st.payment_ref == 'Cash In (Opening Balance)' and st.currency_id)
+            total_cash_in_out = sum((statement_lines - ref_opening_line).mapped('amount'))
 
-        # create the statement lines and account move lines
-        BankStatementLine = self.env['account.bank.statement.line']
-        split_cash_statement_lines = {}
-        combine_cash_statement_lines = {}
-        split_cash_receivable_lines = {}
-        combine_cash_receivable_lines = {}
-        split_cash_statement_lines = BankStatementLine.create(split_cash_statement_line_vals).mapped(
-            'move_id.line_ids').filtered(lambda line: line.account_id.account_type == 'asset_receivable')
-
-        combine_cash_statement_lines = BankStatementLine.create(combine_cash_statement_line_vals).mapped(
-            'move_id.line_ids').filtered(lambda line: line.account_id.account_type == 'asset_receivable')
-        split_cash_receivable_lines = MoveLine.create(split_cash_receivable_vals)
-        combine_cash_receivable_lines = MoveLine.create(combine_cash_receivable_vals)
-
-        data.update(
-            {'split_cash_statement_lines': split_cash_statement_lines,
-             'combine_cash_statement_lines': combine_cash_statement_lines,
-             'split_cash_receivable_lines': split_cash_receivable_lines,
-             'combine_cash_receivable_lines': combine_cash_receivable_lines
-             })
-        return data
-        
-    
+            session.cash_register_total_entry_encoding = total_cash_in_out + (0.0 if session.state == 'closed' else total_cash_payment)
+            session.cash_register_balance_end = session.cash_register_balance_start + session.cash_register_total_entry_encoding
+            session.cash_register_difference = session.cash_register_balance_end_real - session.cash_register_balance_end

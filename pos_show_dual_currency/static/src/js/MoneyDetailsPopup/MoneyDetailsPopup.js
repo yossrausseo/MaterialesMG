@@ -5,27 +5,18 @@ import { usePos } from "@point_of_sale/app/store/pos_hook";
 import { floatIsZero } from "@web/core/utils/numbers";
 import { NumericInput } from "@point_of_sale/app/generic_components/inputs/numeric_input/numeric_input";
 
+
 export class MoneyDetailsPopupUSD extends AbstractAwaitablePopup {
     static template = "pos_show_dual_currency.MoneyDetailsPopupUSD";
     static components = { NumericInput };
-    static props = {
-        ...AbstractAwaitablePopup.props,
-        currencyRefSymbol: { type: String, optional: true },
-        moneyDetailsRef: { type: Object, optional: true },
-        action: { type: String, optional: true }
-    };
 
     setup() {
         super.setup();
         this.pos = usePos();
-        
-        // CORRECCIÓN: Obtener currency_ref del pos.session
-        this.currency_ref = this.pos.pos_session.ref_me_currency_id || this.pos.res_currency_ref;
-        
-         // Inicializar con props o valores por defecto
+        this.currency_ref = this.pos.res_currency_ref;
         this.state = useState({
-            moneyDetailsRef: this.props.moneyDetailsRef || 
-                Object.fromEntries(this.pos.bills.map(bill => [bill.value, 0]))
+            moneyDetailsRef: Object.fromEntries(this.pos.bills.map(bill => ([bill.value, 0]))),
+
         });
     }
 
@@ -36,25 +27,23 @@ export class MoneyDetailsPopupUSD extends AbstractAwaitablePopup {
         }, 0);
     }
 
+    //@override
     async getPayload() {
-        const total = this.computeTotal();
-        let moneyDetailsNotes = '';
-        
-        // CORRECCIÓN: Usar decimales de la moneda de referencia
-        if (!floatIsZero(total, this.currency_ref.decimal_places)) {
-            moneyDetailsNotes = 'Ref Currency Money details: \n';
-            
-            this.pos.bills.forEach((bill) => {
-                if (this.state.moneyDetailsRef[bill.value] > 0) {
-                    moneyDetailsNotes += `  - ${this.state.moneyDetailsRef[bill.value]
-                        } x ${this.pos.format_currency_ref(bill.value)}\n`;
-                }
-            });
-        }
+        let moneyDetailsNotes = !floatIsZero(this.computeTotal(), this.currency_ref.decimal_places)
+            ? 'Ref Currency Money details: \n'
+            : null;
+
+        this.pos.bills.forEach((bill) => {
+            if (this.state.moneyDetailsRef[bill.value]) {
+                moneyDetailsNotes += `  - ${this.state.moneyDetailsRef[bill.value]
+                    } x ${this.pos.format_currency_ref(bill.value)}\n`;
+                    // } x ${this.env.utils.formatCurrency(bill.value)}\n`;     
+            }
+        });
         
         return {
-            total: total,
-            moneyDetailsNotes: moneyDetailsNotes,
+            total: this.computeTotal(),
+            moneyDetailsNotes,
             moneyDetailsRef: { ...this.state.moneyDetailsRef },
             action: this.props.action,
         };
@@ -69,9 +58,7 @@ export class MoneyDetailsPopupUSD extends AbstractAwaitablePopup {
             this.pos.logEmployeeMessage(this.props.action, "ACTION_CANCELLED");
         }
     }
-    
-    // CORRECCIÓN: Función para analizar valores flotantes
-    parseFloat(value) {
-        return isNaN(parseFloat(value)) ? 0 : parseFloat(value);
+    _parseFloat(value) {
+        return parseFloat(value);
     }
 }
