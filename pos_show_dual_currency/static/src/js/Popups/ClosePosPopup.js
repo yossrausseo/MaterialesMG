@@ -13,51 +13,45 @@ ClosePosPopup.props.push('amount_authorized_diff_ref');
 patch(ClosePosPopup.prototype, {
     /**
      * @override
-     * La mejor práctica es llamar a super.setup() y LUEGO añadir tu lógica.
-     * No es necesario volver a inicializar el estado aquí si lo hacemos bien en getInitialState.
      */
     setup() {
         super.setup();
         this.manualInputCashCountUSD = false;
-        // El estado ya se inicializa correctamente dentro del `super.setup()` gracias al siguiente método.
     },
 
 
     /**
      * @override
-     * ESTA ES LA CORRECCIÓN MÁS IMPORTANTE.
-     * 1. Llamamos al `getInitialState` original para que Odoo construya el estado base.
-     * 2. SOBRE ESE ESTADO, añadimos nuestra nueva propiedad `payments_usd`.
-     * De esta forma, `state.payments` siempre estará completo y correcto.
      */
     getInitialState() {
         // Llama a la función original de Odoo para obtener un estado base válido.
         const initialState = super.getInitialState();
         
-        // Ahora, añade tus propiedades personalizadas al estado que ya creó Odoo.
         initialState.payments_usd = {};
-        if (this.pos.config.cash_control) {
-            // Guarda para asegurar que los objetos existen antes de acceder a sus propiedades.
-            if (this.props.default_cash_details?.default_cash_details_ref?.id) {
-                initialState.payments_usd[this.props.default_cash_details.default_cash_details_ref.id] = {
-                    counted: "0",
-                };
-            }
+        if (this.pos.config.cash_control && this.props.default_cash_details?.default_cash_details_ref?.id) {
+            initialState.payments_usd[this.props.default_cash_details.default_cash_details_ref.id] = {
+                counted: "0",
+            };
         }
         
+        this.props.other_payment_methods.forEach((pm) => {
+            // Si no existe ya una entrada para este método de pago (porque no es 'bank')...
+            if (!initialState.payments[pm.id]) {
+                // ...la creamos nosotros.
+                initialState.payments[pm.id] = {
+                    counted: this.env.utils.formatCurrency(pm.amount, false),
+                };
+            }
+        });
+
         return initialState;
     },
 
     /**
      * @override
-     * Reemplazamos la lógica de `confirm` por una que se integra mejor.
-     * Realizamos nuestras validaciones de la moneda de referencia PRIMERO,
-     * y si todo está bien, simplemente delegamos el control a la función `confirm` original.
      */
     async confirm() {
-        // Valida si hay diferencias en la moneda de referencia (USD).
         if (this.cashControl && this.hasDifferenceUSD() && !this.hasUserAuthorityUSD()) {
-            // Si hay una diferencia no autorizada, muestra el popup de error y detiene el proceso.
             await this.popup.add('ConfirmPopup', {
                 title: _t('Currency Ref Payments Difference'),
                 body: _.str.sprintf(
@@ -66,33 +60,26 @@ patch(ClosePosPopup.prototype, {
                 ),
                 confirmText: _t('OK'),
             });
-            return; // Detiene la ejecución aquí.
+            return;
         }
 
         if (this.cashControl && this.hasDifferenceUSD() && this.hasUserAuthorityUSD()) {
-            // Si hay una diferencia autorizada, pregunta al usuario si desea continuar.
             const { confirmed } = await this.popup.add('ConfirmPopup', {
                 title: _t('Currency Ref Payments Difference'),
                 body: _t('Do you want to accept currency ref payments difference and post a profit/loss journal entry?'),
             });
             if (!confirmed) {
-                return; // Si el usuario cancela, detiene el proceso.
+                return;
             }
         }
         
-        // Si no hay problemas con la moneda de referencia (o el usuario los aceptó),
-        // deja que la función original de Odoo maneje el resto del proceso.
-        // Esto ejecutará las validaciones de la moneda principal y el cierre normal.
         return super.confirm(...arguments);
     },
 
     /**
      * @override
-     * Hacemos lo mismo para `closeSession`: llamamos a nuestros métodos ORM primero,
-     * y luego dejamos que el `super` original haga su trabajo.
      */
     async closeSession() {
-        // 1. Ejecuta tu lógica personalizada de la moneda de referencia
         if (this.pos.config.cash_control) {
             const response = await this.orm.call(
                 "pos.session",
@@ -121,8 +108,6 @@ patch(ClosePosPopup.prototype, {
             }
         }
 
-        // 2. Llama a la función original para que ejecute el cierre estándar.
-        // Esta llamada ya no fallará porque `getInitialState` preparó el estado correctamente.
         return super.closeSession(...arguments);
     },
 
@@ -146,8 +131,14 @@ patch(ClosePosPopup.prototype, {
     },
 
 
+    getDifference(paymentId) {
+        if (!paymentId || !this.state.payments[paymentId]) {
+            return 0;
+        }
+        return super.getDifference(...arguments);
+    },
+
     getDifferenceUSD(paymentId) {
-        // Añadimos una guarda de seguridad por si algo falla.
         if (!this.state.payments_usd[paymentId]) {
             return 0;
         }
@@ -155,7 +146,6 @@ patch(ClosePosPopup.prototype, {
         const expectedAmount = this.props.default_cash_details.default_cash_details_ref.amount;
         return counted - expectedAmount;
     },
-
 
     async openDetailsPopupUSD() {
         const action = _t("Cash control - opening");
@@ -168,7 +158,6 @@ patch(ClosePosPopup.prototype, {
             const { total, moneyDetailsRef, moneyDetailsNotes } = payload;
             this.state.payments_usd[this.props.default_cash_details.default_cash_details_ref.id].counted = total;
             if (moneyDetailsNotes) {
-                // Tu lógica original tenía un bug aquí. Lo simplifico.
                 this.state.notes = (this.state.notes ? this.state.notes + "\n" : "") + moneyDetailsNotes;
             }
             this.moneyDetailsRef = moneyDetailsRef;
