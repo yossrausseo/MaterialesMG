@@ -9,7 +9,7 @@
     'company': 'Soltevic 2602 C.A.',
     'maintainer': 'Joinners Méndez',
     'website': 'https://soltevic.com',
-    "depends": ["point_of_sale","pos_sale","stock"],
+    "depends": ["point_of_sale","pos_sale","stock", 'account',],
     "data": [
         "views/pos_payment_method.xml",
         "views/pos_session.xml",

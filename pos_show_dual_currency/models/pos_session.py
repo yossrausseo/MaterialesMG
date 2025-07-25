@@ -160,7 +160,6 @@ class PosSession(models.Model):
         # --- 1. OBTENER DATOS BASE ---
         orders = self._get_closed_orders()
         payments = orders.payment_ids.filtered(lambda p: p.payment_method_id.type != 'pay_later')
-        main_currency = self.currency_id
         ref_currency = self.ref_me_currency_id
 
         # --- 2. IDENTIFICAR MÉTODOS Y DIARIOS DE PAGO POR TIPO ---
@@ -173,19 +172,22 @@ class PosSession(models.Model):
         )
         
         non_cash_pms = self.payment_method_ids.filtered(lambda pm: not pm.is_cash_count)
-
+        
         # --- 3. CÁLCULO AGREGADO PARA MONEDA PRINCIPAL (Bs) ---
-        main_cash_payments = payments.filtered(lambda p: p.payment_method_id.id in main_cash_pms.ids)
-        main_cash_payments_amount = sum(main_cash_payments.mapped('amount'))
+        main_cash_payments_amount = 0.0
+        if main_cash_pms:
+            rate = self.tax_today if self.tax_today > 0 else 1
+            main_cash_payments = payments.filtered(lambda p: p.payment_method_id == main_cash_pms)
+            main_cash_payments_amount = sum(p.amount for p in main_cash_payments)
 
-        # Filtro estricto: Pertenece al diario principal Y NO tiene moneda extranjera.
-        main_cash_journal_id = self.cash_journal_id.id
+        main_journal_id = main_cash_pms.journal_id.id if main_cash_pms else None
         main_statement_lines = self.statement_line_ids.filtered(
-            lambda st: st.journal_id.id == main_cash_journal_id and not st.currency_id
+            lambda st: st.journal_id.id == main_journal_id and 'apertura' not in st.payment_ref
         )
         
-        main_cash_moves_amount = sum(main_statement_lines.mapped('amount'))
+
         main_cash_moves_list = [{'name': move.payment_ref, 'amount': move.amount} for move in main_statement_lines.sorted('create_date')]
+        main_cash_moves_amount = sum(main_statement_lines.mapped('amount'))
         
         expected_amount_main = self.cash_register_balance_start + main_cash_payments_amount + main_cash_moves_amount
 
@@ -296,48 +298,38 @@ class PosSession(models.Model):
     def update_closing_control_state_session_ref(self, notes):
         self._post_cash_details_message_usd('Closing', self.cash_register_difference_ref, notes)
         
-    @api.depends('statement_line_ids', 'order_ids.payment_ids.amount', 'cash_register_balance_start')
+    @api.depends('order_ids.payment_ids.amount', 'statement_line_ids.amount', 'cash_register_balance_start', 'cash_register_balance_end_real')
     def _compute_cash_balance(self):
-        """
-        Versión corregida que emula la lógica nativa de Odoo, incluyendo tanto los pagos
-        de los pedidos como las líneas de extracto manuales en el cálculo del balance teórico.
-        """
         for session in self:
             if not session.config_id.cash_control:
                 session.cash_register_total_entry_encoding = 0.0
                 session.cash_register_balance_end = 0.0
                 session.cash_register_difference = 0.0
                 continue
-
-            # 1. Obtener pagos en efectivo de la moneda principal desde las órdenes (lógica nativa)
-            main_cash_pm = session.payment_method_ids.filtered(
-                lambda pm: pm.is_cash_count and pm.currency_id != session.ref_me_currency_id
-            )
-            # Asegurarse de que el método de pago existe antes de buscar los pagos.
-            total_cash_payment = 0.0
-            if main_cash_pm:
-                payment_data = self.env['pos.payment']._read_group(
-                    [('session_id', '=', session.id), ('payment_method_id', 'in', main_cash_pm.ids)],
-                    aggregates=['amount:sum']
-                )
-                if payment_data and payment_data[0][0]:
-                    total_cash_payment = payment_data[0][0]
-
-            # 2. Obtener movimientos manuales de efectivo de la moneda principal (tu lógica de filtro)
-            statement_lines = session.statement_line_ids.filtered(
-                lambda st: st.journal_id == session.cash_journal_id and not st.currency_id
-            )
-            total_manual_moves = sum(statement_lines.mapped('amount'))
-
-            # 3. Sumar ambos para obtener el total de transacciones
-            total_entry_encoding = total_manual_moves + total_cash_payment
-            session.cash_register_total_entry_encoding = total_entry_encoding
-
-            # 4. Calcular el balance teórico y la diferencia
-            # En sesiones no cerradas, el balance teórico es el inicial más todas las transacciones.
-            session.cash_register_balance_end = session.cash_register_balance_start + total_entry_encoding
-            session.cash_register_difference = session.cash_register_balance_end_real - session.cash_register_balance_end
             
+            # --- Lógica para la moneda principal (ej. Bs) ---
+            main_cash_pm = session.payment_method_ids.filtered(
+                lambda pm: pm.is_cash_count and pm.currency_id == session.currency_id
+            )[:1]
+
+            if main_cash_pm and session.cash_journal_id:
+                # Filtramos las líneas de extracto que pertenecen al diario de efectivo principal.
+                # En el momento del recálculo durante el cierre, esto incluye aperturas, cash in/out y pagos de pedidos.
+                main_statement_lines = session.statement_line_ids.filtered(
+                    lambda st: st.journal_id == session.cash_journal_id
+                )
+                
+                # El total de movimientos es simplemente la suma de estas líneas.
+                total_entry_encoding = sum(main_statement_lines.mapped('amount'))
+                
+                session.cash_register_total_entry_encoding = total_entry_encoding
+                session.cash_register_balance_end = session.cash_register_balance_start + total_entry_encoding
+                session.cash_register_difference = session.cash_register_balance_end_real - session.cash_register_balance_end
+            else:
+                session.cash_register_total_entry_encoding = 0.0
+                session.cash_register_balance_end = 0.0
+                session.cash_register_difference = 0.0
+                
     @api.depends('statement_line_ids.amount', 'cash_register_balance_start_mn_ref')
     def _compute_cash_balance_ref(self):
         """

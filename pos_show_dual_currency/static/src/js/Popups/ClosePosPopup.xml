@@ -23,9 +23,9 @@
         <xpath expr="//td[@t-esc='env.utils.formatCurrency(getDifference(props.default_cash_details.id))']"
                position="replace">
                 <td t-att-class="{'warning text-danger fw-bolder': !env.utils.floatIsZero(getDifference(props.default_cash_details.id))}">
-                     <span style="color: red;"
+                    <!--span style="color: red;"
                             t-esc="pos.format_currency_ref(getDifference(props.default_cash_details.id)*trm)"/>
-                    <span style="color: red;">/</span>
+                    <span style="color: red;">/</span-->
                     <span t-esc="env.utils.formatCurrency(getDifference(props.default_cash_details.id))"/>
                 </td>
         </xpath>
@@ -60,8 +60,8 @@
                     </td>
                     <td t-att-class="{'warning text-danger fw-bolder': getDifferenceUSD(props.default_cash_details.default_cash_details_ref.id)}">
                         <t t-esc="pos.format_currency_ref(getDifferenceUSD(props.default_cash_details.default_cash_details_ref.id))"/>
-                        <span>/</span>
-                        <t t-esc="env.utils.formatCurrency(Math.abs(getDifferenceUSD(props.default_cash_details.default_cash_details_ref.id)) / trm)"/> 
+                        <!--span>/</span>
+                        <t t-esc="env.utils.formatCurrency(Math.abs(getDifferenceUSD(props.default_cash_details.default_cash_details_ref.id)) / trm)"/--> 
                     </td>
                 </tr>
             </tbody>
